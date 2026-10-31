@@ -4,6 +4,7 @@
   var pool = [];
   var wall = null;
   var loader = null;
+  var blobStore = null;
   var settings = null;
   var screen = null;
   var rawAssets = [];
@@ -89,12 +90,18 @@
     return Alcove.junk.asMap(cache.ids);
   }
 
-  function publish(assets, failures) {
+  function setOffline(on) {
+    var badge = document.getElementById('offline');
+    if (badge) badge.hidden = !on;
+  }
+
+  function publish(assets, failures, options) {
     rawAssets = assets || [];
     pool = Alcove.filters.apply(rawAssets, settings, excludeMap());
     for (var n = 0; n < pool.length; n++) pool[n].caption = Alcove.captionFor(pool[n]);
     playlist = Alcove.createPlaylist(pool);
     usingLibrary = true;
+    if (!options || options.persist !== false) Alcove.savePool(root.localStorage, rawAssets);
     if (!pool.length && note) {
       note.hidden = false;
       if (!rawAssets.length) {
@@ -106,6 +113,7 @@
       }
     }
     if (wall) wall.restart();
+    if (loader && pool.length) loader.preload(pool);
   }
 
   function refreshJunk() {
@@ -149,14 +157,8 @@
       useSamples();
       return;
     }
-    if (loader) loader.releaseAll();
-    loader = Alcove.createImageLoader({
-      serverUrl: function () { return settings.serverUrl; },
-      apiKey: function () { return settings.apiKey; },
-      fetch: root.fetch.bind(root),
-      max: 24
-    });
-    if (note) {
+    ensureLoader();
+    if (!(pool.length && usingLibrary) && note) {
       note.hidden = false;
       note.textContent = 'Loading photos from Immich...';
     }
@@ -173,10 +175,26 @@
       publish(result.assets, result.failures);
       refreshJunk();
     }).catch(function () {
-      if (note) {
+      setOffline(true);
+      if (!rawAssets.length && note) {
         note.hidden = false;
         note.textContent = 'Immich did not return photos. Open settings and test the connection.';
       }
+    });
+  }
+
+  function ensureLoader() {
+    if (!settings.serverUrl || !settings.apiKey) return;
+    if (loader) return;
+    if (!blobStore) blobStore = Alcove.createOfflineStore({ max: 36 });
+    loader = Alcove.createImageLoader({
+      serverUrl: function () { return settings.serverUrl; },
+      apiKey: function () { return settings.apiKey; },
+      fetch: root.fetch.bind(root),
+      store: blobStore,
+      max: 24,
+      onOffline: function () { setOffline(true); },
+      onOnline: function () { setOffline(false); }
     });
   }
 
@@ -240,6 +258,7 @@
           if (Alcove.junk.signature(settings) !== previousJunk) refreshJunk();
         }
         syncDecor();
+        syncChrome();
       },
       onConnect: function () { reloadLibrary(); },
       onOpen: function () {
@@ -256,6 +275,31 @@
       Alcove.renderDecoration(document.getElementById('decor'), settings.decoration, new Date());
     }
 
+    function syncChrome() {
+      var now = new Date();
+      var chrome = document.getElementById('chrome');
+      var shift = Alcove.display.burnInShift(now.getTime(), settings.burnInAvoidance);
+      if (chrome) chrome.style.transform = 'translate(' + shift.x + 'px, ' + shift.y + 'px)';
+      var clock = document.getElementById('clock');
+      if (clock) {
+        if (settings.showClock) {
+          var text = Alcove.display.clockText(now);
+          clock.hidden = false;
+          clock.textContent = '';
+          clock.appendChild(document.createTextNode(text.time + ' ' + text.suffix));
+          var day = document.createElement('span');
+          day.textContent = text.date;
+          clock.appendChild(day);
+        } else {
+          clock.hidden = true;
+        }
+      }
+      var night = document.getElementById('night');
+      var dim = Alcove.display.nightOpacity(now, settings) > 0;
+      if (night) night.style.opacity = String(Alcove.display.nightOpacity(now, settings));
+      if (chrome) chrome.classList.toggle('dimmed', dim);
+    }
+
     Alcove.remote.attachRemote({
       settingsScreen: screen,
       onFrameKey: function () { return false; }
@@ -264,7 +308,19 @@
     visualKey = appearance(settings);
     frame.hidden = false;
     syncDecor();
-    setInterval(syncDecor, 60000);
+    syncChrome();
+    setInterval(function () {
+      syncDecor();
+      syncChrome();
+    }, 15000);
+    var cachedPool = Alcove.loadPool(root.localStorage);
+    if (settings.serverUrl && settings.apiKey && cachedPool.length) {
+      ensureLoader();
+      rawAssets = cachedPool;
+      pool = Alcove.filters.apply(rawAssets, settings, excludeMap());
+      playlist = Alcove.createPlaylist(pool);
+      usingLibrary = true;
+    }
     wall.start();
     if (!settings.serverUrl || !settings.apiKey) {
       useSamples();
