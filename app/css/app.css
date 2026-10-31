@@ -8,25 +8,170 @@ body {
   font-family: "LG Smart UI", "Segoe UI", sans-serif;
 }
 
-.stage {
-  min-height: 100vh;
+[hidden] {
+  display: none !important;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.frame {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0c0c0b;
+}
+
+.frame-note {
+  position: absolute;
+  left: 8vw;
+  right: 8vw;
+  top: 42vh;
+  margin: 0;
+  text-align: center;
+  font-size: 1.6rem;
+  line-height: 1.45;
+  color: #d9d3c8;
+}
+
+.hint,
+.pill,
+.caption,
+.clock {
+  margin: 0;
+}
+
+.chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.settings {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.14em;
+  background: #12110f;
+  padding: 2.2rem 2.6rem 1.6rem;
+  box-sizing: border-box;
+}
+
+.settings-head h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 560;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.mark {
-  margin: 0;
-  font-size: 4.2vw;
-  font-weight: 500;
+.settings-status {
+  min-height: 1.4em;
+  margin: 0.45rem 0 0;
+  color: #d6b06a;
+  font-size: 1.05rem;
 }
 
-.sub {
-  margin: 0.6rem 0 0;
-  font-size: 1.2vw;
-  letter-spacing: 0.28em;
-  color: #d6b06a;
+.settings-body {
+  flex: 1;
+  display: flex;
+  gap: 1.4rem;
+  min-height: 0;
+  margin-top: 1.2rem;
+}
+
+.settings-nav {
+  width: 16rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nav-item,
+.pick-item,
+.row {
+  border: 1px solid #2c2924;
+  background: #1a1916;
+  border-radius: 0.7rem;
+  text-align: left;
+}
+
+.nav-item,
+.pick-item {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+
+.nav-item.is-current {
+  border-color: #6d5a36;
+}
+
+.settings-pane {
+  flex: 1;
+  overflow: auto;
+  padding-right: 0.4rem;
+}
+
+.pane-title {
+  margin: 0 0 0.8rem;
+  font-size: 1.5rem;
+  font-weight: 560;
+}
+
+.row {
+  margin-bottom: 0.55rem;
+  padding: 0.75rem 1rem 0.85rem;
+  cursor: pointer;
+}
+
+.row-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: #b7b1a6;
+}
+
+.row-value,
+.row-input {
+  margin-top: 0.25rem;
+  font-size: 1.35rem;
+}
+
+.row-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  padding: 0.2rem 0;
+  background: transparent;
+}
+
+.row-help,
+.empty-note {
+  margin: 0.35rem 0 0;
+  color: #9c968c;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.is-focus {
+  outline: 3px solid #d6b06a;
+  outline-offset: 2px;
+  background: #242119;
+}
+
+html {
+  font-size: 18px;
+}
+
+@media (min-width: 1400px) {
+  html { font-size: 22px; }
 }
