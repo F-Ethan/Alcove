@@ -15,6 +15,8 @@ Build a personal LG webOS TV app: an ambient photo frame and "wall of photos" fo
 4. Sources: albums, favorites, people, folders (Immich folder view API, verify what exists), on-this-day memories if supported. Images only, shuffled without near repeats.
 5. Seasonal decorations: Christmas, winter, fall, spring, summer, auto by date, none. Light effects such as gentle snowfall that stay smooth on old hardware.
 6. Quality filters: people-only option; exclude archived, hidden, trashed and screenshots if detectable; skip low resolution; drop blurry or junk photos using only what Immich really exposes (faces, tags, ratings, smart search, EXIF), such as a minimum star rating and excluding a chosen tag like "blurry". Don't invent API fields.
+   Smart-search junk filter (Ethan confirmed Immich smart search for "blurry" or "black" returns mostly such photos): periodically run Immich smart search (POST /search/smart, CLIP) for a user-editable list of junk queries (defaults: "blurry photo", "black photo", "dark underexposed photo", "screenshot", "receipt", "document"), take the top results per query (configurable count or similarity cutoff, since smart search ranks everything and returns no confidence score), and keep those asset IDs in a cached exclude set the playlist skips. Refresh it daily and when settings change. Expose it in settings with on/off, the query list, and how many results per query to exclude.
+
 7. Fetch images with the API key header into object URLs and revoke them. No memory growth over days.
 8. Preload, small offline cache, retry with backoff, subtle offline indicator.
 9. Optional clock and captions, night dimming, burn-in avoidance.
