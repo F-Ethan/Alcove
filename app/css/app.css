@@ -109,9 +109,104 @@ textarea {
   margin: 0;
 }
 
+.decor {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.decor-winter,
+.decor-christmas {
+  box-shadow: inset 0 0 140px rgba(176, 206, 224, 0.18);
+}
+
+.decor-fall {
+  box-shadow: inset 0 0 140px rgba(176, 112, 64, 0.16);
+}
+
+.decor-spring {
+  box-shadow: inset 0 0 140px rgba(146, 176, 122, 0.16);
+}
+
+.decor-summer {
+  box-shadow: inset 0 0 160px rgba(214, 176, 106, 0.18);
+}
+
+.flake,
+.leaf,
+.petal,
+.mote {
+  position: absolute;
+  top: -8%;
+  display: block;
+  animation-name: drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.flake {
+  border-radius: 50%;
+  background: rgba(244, 248, 252, 0.9);
+}
+
+.leaf {
+  background: #b co;
+  background: #c47a3a;
+  border-radius: 0 70% 0 70%;
+}
+
+.petal {
+  background: #e7b7c6;
+  border-radius: 70% 0 70% 0;
+}
+
+.mote {
+  border-radius: 50%;
+  background: rgba(255, 236, 196, 0.75);
+}
+
+.garland {
+  position: absolute;
+  top: 0.45rem;
+  left: 2vw;
+  right: 2vw;
+  display: flex;
+  justify-content: space-between;
+  animation: sway 8s ease-in-out infinite alternate;
+}
+
+.light {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  animation: twinkle 1.8s ease-in-out infinite;
+}
+
+.tone-0 { background: #d15b5b; box-shadow: 0 0 12px #d15b5b; }
+.tone-1 { background: #e0c27a; box-shadow: 0 0 12px #e0c27a; }
+.tone-2 { background: #7fba78; box-shadow: 0 0 12px #7fba78; }
+
+@keyframes drift {
+  0% { transform: translate3d(0, -5vh, 0); }
+  100% { transform: translate3d(18px, 108vh, 0); }
+}
+
+@keyframes sway {
+  from { transform: translate3d(-8px, 0, 0); }
+  to { transform: translate3d(8px, 0, 0); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
 .chrome {
   position: absolute;
   inset: 0;
+  z-index: 4;
   pointer-events: none;
 }
 

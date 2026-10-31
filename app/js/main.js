@@ -167,6 +167,7 @@
           wall.restart();
         }
         if (libraryInputs(settings) !== previousLibrary) scheduleReload();
+        syncDecor();
       },
       onConnect: function () { reloadLibrary(); },
       onOpen: function () {
@@ -179,6 +180,10 @@
       }
     });
 
+    function syncDecor() {
+      Alcove.renderDecoration(document.getElementById('decor'), settings.decoration, new Date());
+    }
+
     Alcove.remote.attachRemote({
       settingsScreen: screen,
       onFrameKey: function () { return false; }
@@ -186,6 +191,8 @@
 
     visualKey = appearance(settings);
     frame.hidden = false;
+    syncDecor();
+    setInterval(syncDecor, 60000);
     wall.start();
     if (!settings.serverUrl || !settings.apiKey) {
       useSamples();
