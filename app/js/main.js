@@ -5,6 +5,7 @@
   var wall = null;
   var settings = null;
   var screen = null;
+  var rawAssets = [];
   var usingLibrary = false;
   var visualKey = '';
   var reloadTimer = 0;
@@ -41,6 +42,7 @@
 
   function useSamples() {
     usingLibrary = false;
+    rawAssets = [];
     pool = sampleDeck();
     playlist = Alcove.createPlaylist(pool);
     if (note) {
@@ -79,6 +81,65 @@
     return out;
   }
 
+  function excludeMap() {
+    if (!settings.filters.junk.enabled) return null;
+    var cache = Alcove.junk.load(root.localStorage);
+    if (!cache || cache.signature !== Alcove.junk.signature(settings)) return null;
+    return Alcove.junk.asMap(cache.ids);
+  }
+
+  function publish(assets, failures) {
+    rawAssets = assets || [];
+    pool = Alcove.filters.apply(rawAssets, settings, excludeMap());
+    playlist = Alcove.createPlaylist(pool);
+    usingLibrary = true;
+    if (!pool.length && note) {
+      note.hidden = false;
+      if (!rawAssets.length) {
+        note.textContent = failures
+          ? 'Immich did not return photos. Open settings and test the connection.'
+          : 'No photos matched these sources. Pick an album, a person, favorites, or a folder.';
+      } else {
+        note.textContent = 'Every photo was filtered out. Relax the filters in settings.';
+      }
+    }
+    if (wall) wall.restart();
+  }
+
+  function refreshJunk() {
+    if (!settings.filters.junk.enabled || !settings.serverUrl || !settings.apiKey) return Promise.resolve(null);
+    var cache = Alcove.junk.load(root.localStorage);
+    if (!Alcove.junk.shouldRefresh(cache, settings, Date.now())) return Promise.resolve(cache);
+    var client = Alcove.createImmich({
+      serverUrl: settings.serverUrl,
+      apiKey: settings.apiKey,
+      fetch: root.fetch.bind(root)
+    });
+    return Alcove.junk.refresh(client, settings).then(function (result) {
+      if (!settings.serverUrl || !settings.apiKey) return cache;
+      if (result.queries && result.failed === result.queries && cache && cache.ids.length) {
+        if (screen && screen.isOpen()) {
+          screen.setStatus('Smart search did not answer. The saved junk list is still in use.');
+        }
+        return cache;
+      }
+      var next = {
+        signature: Alcove.junk.signature(settings),
+        refreshedAt: Date.now(),
+        ids: result.ids,
+        failed: result.failed
+      };
+      Alcove.junk.save(root.localStorage, next);
+      if (result.failed && screen && screen.isOpen()) {
+        screen.setStatus('Some junk searches failed. Alcove excluded the matches that came back.');
+      }
+      if (rawAssets.length) publish(rawAssets, 0);
+      return next;
+    }).catch(function () {
+      return cache;
+    });
+  }
+
   function reloadLibrary() {
     if (!settings.serverUrl || !settings.apiKey) {
       useSamples();
@@ -98,18 +159,8 @@
           folders: withSelected(result.catalogs.folders, settings.sources.folders)
         });
       }
-      pool = result.assets;
-      playlist = Alcove.createPlaylist(pool);
-      usingLibrary = true;
-      if (!result.assets.length) {
-        if (note) {
-          note.hidden = false;
-          note.textContent = result.failures
-            ? 'Immich did not return photos. Open settings and test the connection.'
-            : 'No photos matched these sources. Pick an album, a person, favorites, or a folder.';
-        }
-      }
-      if (wall) wall.restart();
+      publish(result.assets, result.failures);
+      refreshJunk();
     }).catch(function () {
       if (note) {
         note.hidden = false;
@@ -161,12 +212,18 @@
       onChange: function (next) {
         var previousLook = appearance(settings);
         var previousLibrary = libraryInputs(settings);
+        var previousFilters = JSON.stringify(settings.filters);
+        var previousJunk = Alcove.junk.signature(settings);
         settings = next;
         if (appearance(settings) !== previousLook && wall) {
           visualKey = appearance(settings);
           wall.restart();
         }
         if (libraryInputs(settings) !== previousLibrary) scheduleReload();
+        else if (JSON.stringify(settings.filters) !== previousFilters && rawAssets.length && settings.serverUrl && settings.apiKey) {
+          publish(rawAssets, 0);
+          if (Alcove.junk.signature(settings) !== previousJunk) refreshJunk();
+        }
         syncDecor();
       },
       onConnect: function () { reloadLibrary(); },

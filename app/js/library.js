@@ -30,15 +30,6 @@
     return true;
   }
 
-  function selectAssets(assets, settings, excludeIds) {
-    if (Alcove.filters && Alcove.filters.apply) return Alcove.filters.apply(assets, settings, excludeIds);
-    var out = [];
-    for (var i = 0; i < assets.length; i++) {
-      if (basicKeep(assets[i])) out.push(assets[i]);
-    }
-    return out;
-  }
-
   function isoDay(date) {
     return date.getFullYear() + '-' + Alcove.util.pad2(date.getMonth() + 1) + '-' + Alcove.util.pad2(date.getDate());
   }
@@ -87,7 +78,7 @@
       }
       return catalogJobs.then(function (catalogs) {
         return {
-          assets: selectAssets(dedupe(assets), settings, null),
+          assets: dedupe(assets),
           failures: failures,
           catalogs: {
             albums: catalogs[0].ok ? catalogs[0].value : [],
