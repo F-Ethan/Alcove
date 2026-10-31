@@ -207,6 +207,27 @@
   function boot() {
     var store = Alcove.createSettingsStore(root.localStorage);
     settings = store.load();
+    if (root.location && String(root.location.search || '').indexOf('mock=1') !== -1) {
+      if (!settings.serverUrl || !settings.apiKey) {
+        settings = store.save({
+          serverUrl: settings.serverUrl || root.location.origin,
+          apiKey: settings.apiKey || 'dev-key',
+          sources: settings.sources,
+          layout: settings.layout,
+          intervalSec: settings.intervalSec,
+          crossfadeMs: settings.crossfadeMs,
+          kenBurns: settings.kenBurns,
+          decoration: settings.decoration,
+          showClock: settings.showClock,
+          showCaptions: settings.showCaptions,
+          nightDimming: settings.nightDimming,
+          nightStart: settings.nightStart,
+          nightEnd: settings.nightEnd,
+          burnInAvoidance: settings.burnInAvoidance,
+          filters: settings.filters
+        });
+      }
+    }
     note = document.getElementById('frame-note');
     var frame = document.getElementById('frame');
     pool = sampleDeck();

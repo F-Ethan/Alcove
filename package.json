@@ -4,7 +4,7 @@
   "private": true,
   "description": "Ambient Immich photo frame for LG webOS TV",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "dev": "node tools/dev-server.js",
     "icons": "python3 tools/make-icons.py",
     "package": "ares-package ./app -o dist --no-minify"
