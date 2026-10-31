@@ -1,0 +1,32 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #0c0c0b;
+  color: #f3efe6;
+  font-family: "LG Smart UI", "Segoe UI", sans-serif;
+}
+
+.stage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mark {
+  margin: 0;
+  font-size: 4.2vw;
+  font-weight: 500;
+}
+
+.sub {
+  margin: 0.6rem 0 0;
+  font-size: 1.2vw;
+  letter-spacing: 0.28em;
+  color: #d6b06a;
+}
