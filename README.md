@@ -208,7 +208,7 @@ Night dimming lowers the music with the picture and brings it back in the mornin
 npm test
 ```
 
-The tests cover the playlist, tile timing, filters, settings, retry, and the junk list.
+The tests cover the playlist, tile timing, filters, settings, retry, the junk list, and which playlist or stream a season selects.
 
 ## Where the code lives
 

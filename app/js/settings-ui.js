@@ -37,7 +37,71 @@
     current[path[path.length - 1]] = value;
   }
 
-  function sections() {
+  function musicRows(current) {
+    var music = current && current.music ? current.music : {};
+    var source = music.source || 'navidrome';
+    var rows = [
+      { id: 'musicEnabled', kind: 'bool', label: 'Background music', path: ['music', 'enabled'], help: 'Off until you turn it on. Photos keep changing either way.' },
+      {
+        id: 'musicSource',
+        kind: 'enum',
+        label: 'Source',
+        path: ['music', 'source'],
+        options: Alcove.MUSIC_SOURCES,
+        labels: { navidrome: 'Navidrome', jellyfin: 'Jellyfin', radio: 'Internet radio' }
+      },
+      { id: 'musicVolume', kind: 'number', label: 'Volume', path: ['music', 'volume'], min: 0, max: 100, step: 5, suffix: '%' },
+      { id: 'musicFade', kind: 'number', label: 'Track crossfade', path: ['music', 'crossfadeMs'], min: 0, max: 5000, step: 250, format: 'fade' }
+    ];
+    if (source === 'navidrome' || source === 'jellyfin') {
+      var key = source;
+      var label = source === 'navidrome' ? 'Navidrome' : 'Jellyfin';
+      rows.push(
+        { id: key + 'Url', kind: 'text', label: label + ' URL', path: ['music', key, 'url'], placeholder: source === 'navidrome' ? 'http://192.168.1.66:4533' : 'http://192.168.1.66:8096' },
+        { id: key + 'User', kind: 'text', label: 'Username', path: ['music', key, 'username'] },
+        { id: key + 'Pass', kind: 'secret', label: 'Password', path: ['music', key, 'password'], help: 'Stored on this TV. Alcove does not write it to the log.' },
+        { id: 'testMusic', kind: 'button', label: 'Test music', help: 'Loads playlists so you can assign one to each season.' }
+      );
+      var seasons = [
+        ['christmas', 'Christmas playlist'],
+        ['winter', 'Winter playlist'],
+        ['fall', 'Fall playlist'],
+        ['spring', 'Spring playlist'],
+        ['summer', 'Summer playlist'],
+        ['none', 'Playlist when decorations are off']
+      ];
+      for (var i = 0; i < seasons.length; i++) {
+        rows.push({
+          id: key + '-' + seasons[i][0],
+          kind: 'one',
+          label: seasons[i][1],
+          path: ['music', key, 'playlists', seasons[i][0]],
+          catalog: key + 'Playlists'
+        });
+      }
+    }
+    if (source === 'radio') {
+      var streams = music.radio && music.radio.streams ? music.radio.streams : [];
+      for (var s = 0; s < streams.length; s++) {
+        rows.push(
+          { id: 'streamName' + s, kind: 'text', label: 'Stream ' + (s + 1) + ' name', path: ['music', 'radio', 'streams', s, 'name'] },
+          { id: 'streamUrl' + s, kind: 'text', label: 'Stream ' + (s + 1) + ' URL', path: ['music', 'radio', 'streams', s, 'url'], placeholder: 'https://example.com/stream.mp3', help: 'MP3 or AAC is the reliable choice. Leave the URL empty to skip the row.' },
+          {
+            id: 'streamSeason' + s,
+            kind: 'enum',
+            label: 'Stream ' + (s + 1) + ' season',
+            path: ['music', 'radio', 'streams', s, 'season'],
+            options: Alcove.STREAM_SEASONS,
+            labels: { any: 'Any season', christmas: 'Christmas', winter: 'Winter', fall: 'Fall', spring: 'Spring', summer: 'Summer', none: 'Decorations off' }
+          }
+        );
+      }
+      rows.push({ id: 'addStream', kind: 'button', label: 'Add a stream', help: 'Up to 8 streams. Empty URLs are ignored.' });
+    }
+    return rows;
+  }
+
+  function sections(current) {
     return [
       {
         id: 'immich',
@@ -262,11 +326,16 @@
             help: 'Slowly shifts the clock and captions so they do not sit on the same pixels.'
           }
         ]
+      },
+      {
+        id: 'music',
+        label: 'Music',
+        rows: musicRows(current)
       }
     ];
   }
 
-  function formatValue(row, value) {
+  function formatValue(row, value, catalogs) {
     if (row.kind === 'bool') return value ? 'On' : 'Off';
     if (row.kind === 'enum') return (row.labels && row.labels[value]) || value;
     if (row.kind === 'number') {
@@ -283,6 +352,14 @@
     if (row.kind === 'lines') {
       var lines = Array.isArray(value) ? value : [];
       return lines.length ? lines.length + ' phrases' : 'None';
+    }
+    if (row.kind === 'one') {
+      if (!value) return 'Off';
+      var choices = catalogs && catalogs[row.catalog] ? catalogs[row.catalog] : [];
+      for (var c = 0; c < choices.length; c++) {
+        if (choices[c].id === value) return choices[c].label;
+      }
+      return 'Saved playlist';
     }
     if (row.kind === 'secret') return value ? 'Saved on this TV' : 'Not set';
     if (row.kind === 'button') return 'Run';
@@ -305,7 +382,7 @@
     var rootEl = opts.rootEl;
 
     function currentSection() {
-      return sections()[sectionIndex];
+      return sections(settings)[sectionIndex];
     }
 
     function persist() {
@@ -336,7 +413,7 @@
 
     function renderNav() {
       navEl.innerHTML = '';
-      var list = sections();
+      var list = sections(settings);
       for (var i = 0; i < list.length; i++) {
         var button = el('button', 'nav-item', list[i].label);
         button.type = 'button';
@@ -401,7 +478,7 @@
         });
         wrap.appendChild(input);
       } else {
-        wrap.appendChild(el('div', 'row-value', formatValue(row, row.path ? readPath(settings, row.path) : '')));
+        wrap.appendChild(el('div', 'row-value', formatValue(row, row.path ? readPath(settings, row.path) : '', catalogs)));
       }
       if (row.help) wrap.appendChild(el('p', 'row-help', row.help));
       wrap.addEventListener('click', function () {
@@ -418,19 +495,24 @@
       persist();
     }
 
+    function oneItems(row) {
+      return [{ id: '', label: 'Off' }].concat(catalogs[row.catalog] || []);
+    }
+
     function renderPicker() {
       var row = currentSection().rows[rowIndex];
-      var items = catalogs[row.catalog] || [];
-      var selected = readPath(settings, row.path).slice();
+      var single = row.kind === 'one';
+      var items = single ? oneItems(row) : (catalogs[row.catalog] || []);
+      var selected = single ? readPath(settings, row.path) : readPath(settings, row.path).slice();
       paneEl.innerHTML = '';
       paneEl.appendChild(el('h2', 'pane-title', row.label));
-      paneEl.appendChild(el('p', 'row-help', 'OK toggles an item. Back returns to the list.'));
+      paneEl.appendChild(el('p', 'row-help', single ? 'OK chooses one playlist. Back returns.' : 'OK toggles an item. Back returns to the list.'));
       if (!items.length) {
         paneEl.appendChild(el('p', 'empty-note', 'Nothing loaded yet. Test the connection, then open this list again.'));
         return;
       }
       for (var i = 0; i < items.length; i++) {
-        var on = selected.indexOf(items[i].id) !== -1;
+        var on = single ? selected === items[i].id : selected.indexOf(items[i].id) !== -1;
         var button = el('button', 'pick-item', (on ? 'On  ' : 'Off  ') + items[i].label);
         button.type = 'button';
         button.setAttribute('data-pick', String(i));
@@ -448,6 +530,15 @@
 
     function flipPick() {
       var row = currentSection().rows[rowIndex];
+      if (row.kind === 'one') {
+        var choices = oneItems(row);
+        var chosen = choices[pickIndex];
+        if (!chosen) return;
+        writePath(settings, row.path, chosen.id);
+        persist();
+        render();
+        return;
+      }
       var items = catalogs[row.catalog] || [];
       var item = items[pickIndex];
       if (!item) return;
@@ -462,6 +553,8 @@
 
     function render() {
       if (!openFlag) return;
+      var rows = currentSection().rows;
+      if (rowIndex >= rows.length) rowIndex = Math.max(0, rows.length - 1);
       renderNav();
       if (mode === 'picker') renderPicker();
       else renderRows();
@@ -507,7 +600,30 @@
         });
         return;
       }
-      if (row.kind === 'multi') {
+      if (row.kind === 'button' && row.id === 'testMusic') {
+        setStatus('Checking the music server...');
+        var job = opts.onTestMusic ? opts.onTestMusic(settings) : Promise.resolve({ message: 'Music test is not wired.' });
+        Promise.resolve(job).then(function (result) {
+          if (result && result.catalogs) setCatalogs(result.catalogs);
+          setStatus(result && result.message ? result.message : 'Music server answered.');
+        }).catch(function () {
+          setStatus('The music server did not answer. Check the URL and the password.');
+        });
+        return;
+      }
+      if (row.kind === 'button' && row.id === 'addStream') {
+        var streams = settings.music.radio.streams.slice();
+        if (streams.length >= 8) {
+          setStatus('Eight streams is the limit.');
+          return;
+        }
+        streams.push({ name: 'Stream ' + (streams.length + 1), url: '', season: 'any' });
+        settings.music.radio.streams = streams;
+        persist();
+        render();
+        return;
+      }
+      if (row.kind === 'multi' || row.kind === 'one') {
         mode = 'picker';
         pickIndex = 0;
         render();
@@ -588,14 +704,14 @@
     function move(direction) {
       if (mode === 'picker') {
         var row = currentSection().rows[rowIndex];
-        var items = catalogs[row.catalog] || [];
+        var items = row.kind === 'one' ? oneItems(row) : (catalogs[row.catalog] || []);
         if (!items.length) return;
         pickIndex = (pickIndex + direction + items.length) % items.length;
         applyFocus();
         return;
       }
       if (mode === 'sections') {
-        var count = sections().length;
+        var count = sections(settings).length;
         sectionIndex = (sectionIndex + direction + count) % count;
         rowIndex = 0;
         render();
@@ -626,7 +742,7 @@
         if (direction < 0) {
           mode = 'sections';
           render();
-        } else if (row.kind === 'multi' || row.kind === 'text' || row.kind === 'secret' || row.kind === 'lines' || row.kind === 'button') {
+        } else if (row.kind === 'multi' || row.kind === 'one' || row.kind === 'text' || row.kind === 'secret' || row.kind === 'lines' || row.kind === 'button') {
           activateRow();
         }
       }
@@ -650,11 +766,10 @@
     }
 
     function setCatalogs(next) {
-      catalogs = {
-        albums: next.albums || [],
-        people: next.people || [],
-        folders: next.folders || []
-      };
+      var keys = ['albums', 'people', 'folders', 'navidromePlaylists', 'jellyfinPlaylists'];
+      for (var i = 0; i < keys.length; i++) {
+        if (Object.prototype.hasOwnProperty.call(next, keys[i])) catalogs[keys[i]] = next[keys[i]] || [];
+      }
       if (openFlag) render();
     }
 

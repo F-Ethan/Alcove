@@ -13,6 +13,8 @@
   var reloadTimer = 0;
   var note = null;
   var userPaused = false;
+  var player = null;
+  var musicSignature = '';
 
   var SAMPLE_COLORS = ['#5c7a8a', '#ba9a70', '#6e7d5a', '#8a6256', '#3e4a55', '#7d6a86', '#4f6f64', '#a98467'];
 
@@ -224,7 +226,8 @@
           nightStart: settings.nightStart,
           nightEnd: settings.nightEnd,
           burnInAvoidance: settings.burnInAvoidance,
-          filters: settings.filters
+          filters: settings.filters,
+          music: settings.music
         });
       }
     }
@@ -281,6 +284,26 @@
         }
         syncDecor();
         syncChrome();
+        syncMusic();
+      },
+      onTestMusic: function (current) {
+        var source = current.music.source;
+        var server = current.music[source];
+        if (!server || !server.url) return Promise.resolve({ message: 'Enter the music server URL first.' });
+        var client = source === 'jellyfin'
+          ? Alcove.createJellyfin({ url: server.url, username: server.username, password: server.password, fetch: root.fetch.bind(root) })
+          : Alcove.createNavidrome({ url: server.url, username: server.username, password: server.password, fetch: root.fetch.bind(root) });
+        return client.ping().then(function () {
+          return client.playlists();
+        }).then(function (list) {
+          var catalogs = {};
+          catalogs[source + 'Playlists'] = list;
+          var count = list.length;
+          return {
+            message: count ? ('Music server answered. ' + count + ' playlists.') : 'Music server answered, and it has no playlists yet.',
+            catalogs: catalogs
+          };
+        });
       },
       onConnect: function () { reloadLibrary(); },
       onOpen: function () {
@@ -320,6 +343,56 @@
       var dim = Alcove.display.nightOpacity(now, settings) > 0;
       if (night) night.style.opacity = String(Alcove.display.nightOpacity(now, settings));
       if (chrome) chrome.classList.toggle('dimmed', dim);
+      if (player) player.setNight(dim);
+    }
+
+    function secretStamp(value) {
+      var text = String(value || '');
+      var sum = 0;
+      for (var i = 0; i < text.length; i++) sum = (sum + text.charCodeAt(i) * (i + 1)) % 1000003;
+      return text.length + ':' + sum;
+    }
+
+    function syncMusic() {
+      if (!player || !settings.music) return;
+      player.setVolume(settings.music.volume);
+      player.setCrossfade(settings.music.crossfadeMs);
+      player.setNight(Alcove.display.nightOpacity(new Date(), settings) > 0);
+      if (!settings.music.enabled) {
+        musicSignature = '';
+        player.stop();
+        return;
+      }
+      var season = Alcove.util.activeDecoration(settings.decoration, new Date());
+      var source = settings.music.source;
+      var signature = source + '|' + season;
+      if (source === 'radio') {
+        var choice = Alcove.musicPlan.radioChoice(settings.music.radio.streams, season);
+        signature += '|' + (choice ? choice.url : '');
+        if (signature === musicSignature) return;
+        musicSignature = signature;
+        if (choice) player.playStream(choice.url);
+        else player.stop();
+        return;
+      }
+      var server = settings.music[source];
+      var playlistId = Alcove.musicPlan.playlistIdFor(server.playlists, season);
+      signature += '|' + server.url + '|' + server.username + '|' + secretStamp(server.password) + '|' + playlistId;
+      if (signature === musicSignature) return;
+      musicSignature = signature;
+      if (!server.url || !playlistId) {
+        player.stop();
+        return;
+      }
+      var client = source === 'jellyfin'
+        ? Alcove.createJellyfin({ url: server.url, username: server.username, password: server.password, fetch: root.fetch.bind(root) })
+        : Alcove.createNavidrome({ url: server.url, username: server.username, password: server.password, fetch: root.fetch.bind(root) });
+      client.tracks(playlistId).then(function (tracks) {
+        if (!settings.music.enabled) return;
+        player.playTracks(Alcove.shuffle(tracks, Math.random));
+      }).catch(function () {
+        if (screen && screen.isOpen()) screen.setStatus('The playlist did not load. Music will try again after the next change.');
+      });
     }
 
     function setPausedBadge(paused) {
@@ -342,10 +415,16 @@
           return true;
         }
         if (ok && wall) {
+          if (player) player.resume();
           userPaused = !userPaused;
           if (userPaused) wall.pause();
           else wall.resume();
           setPausedBadge(userPaused);
+          return true;
+        }
+        var mute = event.key === 'm' || event.key === 'M' || event.keyCode === 406;
+        if (mute && player) {
+          player.toggleMute();
           return true;
         }
         return false;
@@ -354,11 +433,17 @@
 
     visualKey = appearance(settings);
     frame.hidden = false;
+    player = Alcove.createPlayer({
+      audioA: document.getElementById('audio-a'),
+      audioB: document.getElementById('audio-b')
+    });
     syncDecor();
     syncChrome();
+    syncMusic();
     setInterval(function () {
       syncDecor();
       syncChrome();
+      syncMusic();
     }, 15000);
     var cachedPool = Alcove.loadPool(root.localStorage);
     if (settings.serverUrl && settings.apiKey && cachedPool.length) {

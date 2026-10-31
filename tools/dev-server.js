@@ -8,6 +8,31 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+function toneWav() {
+  const sampleRate = 8000;
+  const samples = sampleRate;
+  const data = Buffer.alloc(44 + samples * 2);
+  data.write('RIFF', 0);
+  data.writeUInt32LE(36 + samples * 2, 4);
+  data.write('WAVE', 8);
+  data.write('fmt ', 12);
+  data.writeUInt32LE(16, 16);
+  data.writeUInt16LE(1, 20);
+  data.writeUInt16LE(1, 22);
+  data.writeUInt32LE(sampleRate, 24);
+  data.writeUInt32LE(sampleRate * 2, 28);
+  data.writeUInt16LE(2, 32);
+  data.writeUInt16LE(16, 34);
+  data.write('data', 36);
+  data.writeUInt32LE(samples * 2, 40);
+  for (let i = 0; i < samples; i += 1) {
+    const value = Math.round(Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 1800);
+    data.writeInt16LE(value, 44 + i * 2);
+  }
+  return data;
+}
+
+const tone = toneWav();
 const root = path.join(__dirname, '..', 'app');
 const port = Number(process.env.PORT) || 8787;
 
@@ -213,6 +238,38 @@ const server = http.createServer(function (request, response) {
   }
   if (url.pathname.indexOf('/api/') === 0) {
     send(response, 404, JSON.stringify({ message: 'No mock for ' + url.pathname }));
+    return;
+  }
+  if (url.pathname === '/rest/ping.view') {
+    send(response, 200, JSON.stringify({ 'subsonic-response': { status: 'ok', version: '1.16.1' } }));
+    return;
+  }
+  if (url.pathname === '/rest/getPlaylists.view') {
+    send(response, 200, JSON.stringify({ 'subsonic-response': { status: 'ok', version: '1.16.1', playlists: { playlist: [{ id: 'pl-xmas', name: 'Christmas' }, { id: 'pl-quiet', name: 'Quiet' }] } } }));
+    return;
+  }
+  if (url.pathname === '/rest/getPlaylist.view') {
+    send(response, 200, JSON.stringify({ 'subsonic-response': { status: 'ok', version: '1.16.1', playlist: { id: url.searchParams.get('id'), entry: [{ id: 'track-1', title: 'Carol' }] } } }));
+    return;
+  }
+  if (url.pathname === '/rest/stream.view') {
+    send(response, 200, tone, 'audio/wav');
+    return;
+  }
+  if (url.pathname === '/Users/AuthenticateByName' && request.method === 'POST') {
+    send(response, 200, JSON.stringify({ AccessToken: 'dev-token', User: { Id: 'user-1' } }));
+    return;
+  }
+  if (url.pathname === '/Users/user-1/Items') {
+    send(response, 200, JSON.stringify({ Items: [{ Id: 'jf-xmas', Name: 'Christmas' }] }));
+    return;
+  }
+  if (url.pathname.indexOf('/Playlists/') === 0 && url.pathname.indexOf('/Items') !== -1) {
+    send(response, 200, JSON.stringify({ Items: [{ Id: 'jf-track', Name: 'Carol' }] }));
+    return;
+  }
+  if (url.pathname.indexOf('/Audio/') === 0) {
+    send(response, 200, tone, 'audio/wav');
     return;
   }
   serveFile(response, url.pathname);

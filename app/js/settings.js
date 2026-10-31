@@ -3,6 +3,9 @@
   var util = Alcove.util;
 
   var LAYOUTS = ['single', 'two', 'three', 'four', 'mixed'];
+  var MUSIC_SOURCES = ['navidrome', 'jellyfin', 'radio'];
+  var STREAM_SEASONS = ['any', 'christmas', 'winter', 'fall', 'spring', 'summer', 'none'];
+  var PLAYLIST_SEASONS = ['christmas', 'winter', 'fall', 'spring', 'summer', 'none'];
   var DECORATIONS = ['auto', 'none', 'christmas', 'winter', 'fall', 'spring', 'summer'];
   var STORAGE_KEY = 'alcove.settings.v1';
 
@@ -51,7 +54,45 @@
         excludeTag: '',
         minShortEdge: 720,
         junk: junkDefaults()
+      },
+      music: musicDefaults()
+    };
+  }
+
+  function musicDefaults() {
+    return {
+      enabled: false,
+      source: 'navidrome',
+      volume: 40,
+      crossfadeMs: 1500,
+      navidrome: emptyServer(),
+      jellyfin: emptyServer(),
+      radio: {
+        streams: [
+          { name: 'Example stream', url: '', season: 'any' },
+          { name: 'Season stream', url: '', season: 'christmas' }
+        ]
       }
+    };
+  }
+
+  function emptyServer() {
+    return {
+      url: '',
+      username: '',
+      password: '',
+      playlists: emptyPlaylists()
+    };
+  }
+
+  function emptyPlaylists() {
+    return {
+      christmas: '',
+      winter: '',
+      fall: '',
+      spring: '',
+      summer: '',
+      none: ''
     };
   }
 
@@ -125,8 +166,57 @@
           queries: asQueries(junk.queries),
           perQuery: util.clamp(junk.perQuery, 1, 200, defaults.filters.junk.perQuery)
         }
-      }
+      },
+      music: mergeMusic(incoming.music, defaults.music)
     };
+  }
+
+  function mergeMusic(value, defaults) {
+    var src = value || {};
+    return {
+      enabled: src.enabled === true,
+      source: pickEnum(src.source, MUSIC_SOURCES, defaults.source),
+      volume: util.clamp(src.volume, 0, 100, defaults.volume),
+      crossfadeMs: util.clamp(src.crossfadeMs, 0, 5000, defaults.crossfadeMs),
+      navidrome: mergeServer(src.navidrome),
+      jellyfin: mergeServer(src.jellyfin),
+      radio: { streams: asStreams(src.radio && src.radio.streams) }
+    };
+  }
+
+  function mergeServer(value) {
+    var src = value || {};
+    return {
+      url: String(src.url || '').trim().replace(/\/+$/, ''),
+      username: String(src.username || '').trim().slice(0, 80),
+      password: String(src.password || ''),
+      playlists: mergePlaylists(src.playlists)
+    };
+  }
+
+  function mergePlaylists(value) {
+    var src = value || {};
+    var out = emptyPlaylists();
+    for (var i = 0; i < PLAYLIST_SEASONS.length; i++) {
+      out[PLAYLIST_SEASONS[i]] = String(src[PLAYLIST_SEASONS[i]] || '').trim();
+    }
+    return out;
+  }
+
+  function asStreams(value) {
+    var source = Array.isArray(value) ? value : [];
+    var out = [];
+    for (var i = 0; i < source.length && out.length < 8; i++) {
+      var row = source[i] || {};
+      var season = STREAM_SEASONS.indexOf(row.season) === -1 ? 'any' : row.season;
+      out.push({
+        name: String(row.name || '').trim().slice(0, 40) || ('Stream ' + (out.length + 1)),
+        url: String(row.url || '').trim().slice(0, 400),
+        season: season
+      });
+    }
+    if (!out.length) return musicDefaults().radio.streams;
+    return out;
   }
 
   function redactSettings(settings) {
@@ -162,6 +252,8 @@
 
   Alcove.LAYOUTS = LAYOUTS;
   Alcove.DECORATIONS = DECORATIONS;
+  Alcove.MUSIC_SOURCES = MUSIC_SOURCES;
+  Alcove.STREAM_SEASONS = STREAM_SEASONS;
   Alcove.DEFAULT_JUNK_QUERIES = DEFAULT_JUNK_QUERIES.slice();
   Alcove.defaultSettings = defaultSettings;
   Alcove.mergeSettings = mergeSettings;
