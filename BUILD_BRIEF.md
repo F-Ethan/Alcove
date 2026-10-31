@@ -13,7 +13,7 @@ Build a personal LG webOS TV app: an ambient photo frame and "wall of photos" fo
 2. Remote-friendly settings screen: server URL, API key (typed on the TV, stored locally, never committed or logged; document minimal read-only key permissions), sources, layout, timing, decorations, filters, overlays.
 3. Photo wall: several photos at once, each tile on its own staggered timer. Layout picker: single, 2-up, 3-up mosaic, 4-grid, mixed collage for portrait and landscape. Crossfades, optional Ken Burns, preview-size images.
 4. Sources: albums, favorites, people, folders (Immich folder view API, verify what exists), on-this-day memories if supported. Images only, shuffled without near repeats.
-5. Seasonal decorations: Christmas, winter, fall, spring, summer, Halloween, auto by date, none. Light effects such as gentle snowfall that stay smooth on old hardware.
+5. Seasonal decorations: Christmas, winter, fall, spring, summer, auto by date, none. Light effects such as gentle snowfall that stay smooth on old hardware.
 6. Quality filters: people-only option; exclude archived, hidden, trashed and screenshots if detectable; skip low resolution; drop blurry or junk photos using only what Immich really exposes (faces, tags, ratings, smart search, EXIF), such as a minimum star rating and excluding a chosen tag like "blurry". Don't invent API fields.
 7. Fetch images with the API key header into object URLs and revoke them. No memory growth over days.
 8. Preload, small offline cache, retry with backoff, subtle offline indicator.
