@@ -27,6 +27,69 @@ textarea {
   background: #0c0c0b;
 }
 
+.tiles {
+  position: absolute;
+  inset: 0;
+  --fade: 900ms;
+  --dwell: 20s;
+}
+
+.tile {
+  position: absolute;
+  overflow: hidden;
+  background: #161614;
+  border-radius: 0.35rem;
+}
+
+.tile .layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: var(--fade);
+  transition-timing-function: ease;
+}
+
+.tile .layer.on {
+  opacity: 1;
+}
+
+.tiles.ken .layer.on {
+  animation: ken var(--dwell) ease-in-out alternate infinite;
+}
+
+.tile.kb-alt .layer.on {
+  animation-name: ken-alt;
+}
+
+.tiles.paused .layer {
+  animation-play-state: paused;
+}
+
+@keyframes ken {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.08) translate3d(-2%, -1.5%, 0); }
+}
+
+@keyframes ken-alt {
+  from { transform: scale(1.02) translate3d(-1%, 0, 0); }
+  to { transform: scale(1.1) translate3d(2%, 1%, 0); }
+}
+
+.tile-cap {
+  position: absolute;
+  left: 0.8rem;
+  right: 0.8rem;
+  bottom: 0.7rem;
+  margin: 0;
+  font-size: 1.15rem;
+  color: #f3efe6;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
 .frame-note {
   position: absolute;
   left: 8vw;
