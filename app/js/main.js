@@ -12,6 +12,7 @@
   var visualKey = '';
   var reloadTimer = 0;
   var note = null;
+  var userPaused = false;
 
   var SAMPLE_COLORS = ['#5c7a8a', '#ba9a70', '#6e7d5a', '#8a6256', '#3e4a55', '#7d6a86', '#4f6f64', '#a98467'];
 
@@ -267,7 +268,7 @@
       onClose: function (next) {
         settings = next;
         frame.hidden = false;
-        if (wall && wall.isPaused()) wall.resume();
+        if (wall && !userPaused) wall.resume();
       }
     });
 
@@ -300,9 +301,34 @@
       if (chrome) chrome.classList.toggle('dimmed', dim);
     }
 
+    function setPausedBadge(paused) {
+      var badge = document.getElementById('paused');
+      if (badge) badge.hidden = !paused;
+    }
+
     Alcove.remote.attachRemote({
       settingsScreen: screen,
-      onFrameKey: function () { return false; }
+      onFrameKey: function (event) {
+        var left = event.key === 'ArrowLeft' || event.keyCode === 37;
+        var right = event.key === 'ArrowRight' || event.keyCode === 39;
+        var ok = event.key === 'Enter' || event.keyCode === 13 || event.keyCode === 415 || event.keyCode === 19;
+        if (right && wall) {
+          wall.skip(1);
+          return true;
+        }
+        if (left && wall) {
+          wall.skip(-1);
+          return true;
+        }
+        if (ok && wall) {
+          userPaused = !userPaused;
+          if (userPaused) wall.pause();
+          else wall.resume();
+          setPausedBadge(userPaused);
+          return true;
+        }
+        return false;
+      }
     });
 
     visualKey = appearance(settings);
