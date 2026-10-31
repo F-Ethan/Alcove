@@ -1,0 +1,25 @@
+{
+  "id": "com.ethan.alcove",
+  "version": "1.0.0",
+  "vendor": "Ethan",
+  "type": "web",
+  "main": "index.html",
+  "title": "Alcove",
+  "appDescription": "Ambient photo frame for a self-hosted Immich library",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#121110",
+  "bgColor": "#0c0c0b",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "handlesRelaunch": false,
+  "requiredPermissions": [
+    "time.query",
+    "audio.operation",
+    "media.operation"
+  ],
+  "requiredACG": [],
+  "vendorExtension": {
+    "allowCrossDomain": true
+  }
+}

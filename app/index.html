@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alcove</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <section id="frame" class="frame" hidden>
+    <div id="tiles" class="tiles"></div>
+    <div id="decor" class="decor" aria-hidden="true"></div>
+    <div id="night" class="night" aria-hidden="true"></div>
+    <div id="chrome" class="chrome">
+      <p id="frame-note" class="frame-note"></p>
+      <p id="caption" class="caption" hidden></p>
+      <p id="clock" class="clock" hidden></p>
+      <p id="offline" class="pill" hidden>Offline</p>
+      <p id="paused" class="pill" hidden>Paused</p>
+      <p id="hint" class="hint">Yellow opens settings. OK pauses.</p>
+    </div>
+  </section>
+
+  <section id="settings" class="settings" hidden>
+    <header class="settings-head">
+      <h1>Alcove</h1>
+      <p id="settings-status" class="settings-status">Yellow or Back leaves settings. Arrows move. OK changes a row.</p>
+    </header>
+    <div class="settings-body">
+      <nav id="settings-nav" class="settings-nav"></nav>
+      <div id="settings-pane" class="settings-pane"></div>
+    </div>
+  </section>
+
+  <audio id="audio-a" preload="none"></audio>
+  <audio id="audio-b" preload="none"></audio>
+
+  <script src="js/util.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/probe.js"></script>
+  <script src="js/layouts.js"></script>
+  <script src="js/playlist.js"></script>
+  <script src="js/retry.js"></script>
+  <script src="js/immich.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/junk.js"></script>
+  <script src="js/offline.js"></script>
+  <script src="js/images.js"></script>
+  <script src="js/wall.js"></script>
+  <script src="js/decorations.js"></script>
+  <script src="js/display.js"></script>
+  <script src="js/md5.js"></script>
+  <script src="js/navidrome.js"></script>
+  <script src="js/jellyfin.js"></script>
+  <script src="js/music.js"></script>
+  <script src="js/settings-ui.js"></script>
+  <script src="js/remote.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

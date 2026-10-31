@@ -1,0 +1,19 @@
+# Listens on 2284 and forwards to Immich on 127.0.0.1:2283.
+# Point Alcove at http://<laptop>:2284 when an older webOS TV blocks Immich for CORS.
+# webOS 25 usually does not need this.
+
+:2284 {
+	@options method OPTIONS
+	handle @options {
+		header Access-Control-Allow-Origin *
+		header Access-Control-Allow-Headers "x-api-key, content-type, accept"
+		header Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		respond 204
+	}
+	handle {
+		reverse_proxy 127.0.0.1:2283
+		header Access-Control-Allow-Origin *
+		header Access-Control-Allow-Headers "x-api-key, content-type, accept"
+		header Access-Control-Allow-Methods "GET, POST, OPTIONS"
+	}
+}
