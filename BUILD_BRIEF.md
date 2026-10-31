@@ -5,7 +5,7 @@ Build a personal LG webOS TV app: an ambient photo frame and "wall of photos" fo
 ## Environment
 - Immich runs on an Ubuntu laptop on the home LAN at http://home-server:2283 / 192.168.1.66:2283 (DHCP, may change). The TV cannot run Tailscale, so the server URL must be editable on the TV.
 - The laptop's Wi-Fi is flaky, so the frame must keep showing photos while offline and recover on its own.
-- TV model unknown: target old Chromium and state the minimum webOS version (webOS 5 / Chromium 68 is a reasonable floor).
+- TV: Ethan's LG is about one year old (bought around late 2025), so it should be a 2025 model on webOS 25 (webOS 10 era, recent Chromium) with built-in AirPlay 2. Target that first; installed apps there should not hit CORS. Keep code reasonably compatible with older webOS (webOS 6+) where cheap, and state the real minimum.
 - CORS: packaged webOS apps run from file://, Immich sends no CORS headers. webOS 10+ bypasses CORS for installed apps, older firmware enforces it. Detect the failure with a clear message and include a ready-to-use reverse proxy config (Caddy or nginx) for the home server.
 
 ## Features
@@ -23,7 +23,11 @@ Build a personal LG webOS TV app: an ambient photo frame and "wall of photos" fo
 10. Remote: left/right skip, OK pause, a key for settings, Back per webOS conventions.
 11. Desktop dev mode with a mocked Immich API, plus unit tests (playlist, tile timing, filters, settings, retry).
 12. README: Mac install steps (webOS CLI, Developer Mode on the TV, add device, package, install, launch, Developer Mode renewal), DHCP reservation, CORS proxy setup.
-13. ARCHITECTURE.md: short, beginner-friendly explanation of modules and data flow, for a code walkthrough later.
+13. Background music (optional, off by default), two sources selectable in settings:
+   a. Local music server on the home laptop: Navidrome (Subsonic API) first, Jellyfin as a second adapter if simple. Server URL and credentials typed on the TV, stored locally, never committed. User picks playlists per season; "auto" follows the active decoration (e.g. Christmas decorations play the Christmas playlist). Shuffle, loop, crossfade between tracks.
+   b. Internet radio: a list of user-entered stream URLs (MP3/AAC/HLS where the TV supports it), each optionally tied to a season, with a few editable example presets (no hardcoded stations that may break).
+   Shared: volume, mute key on the remote, fade out during night dimming and back in, keep playing across photo changes, recover after network drops, no memory growth. Use the standard HTML5 audio element. README: how to install Navidrome on the Ubuntu laptop (Docker) and organize seasonal playlists. No YouTube (terms) and no AirPlay integration; note in README that a phone can AirPlay/Bluetooth to a separate speaker instead.
+14. ARCHITECTURE.md: short, beginner-friendly explanation of modules and data flow, for a code walkthrough later.
 
 ## Constraints
 No secrets in the repo, no em dashes in user-facing copy or docs, minimal dependencies.
