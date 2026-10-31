@@ -1,9 +1,14 @@
 (function (root) {
   var Alcove = root.Alcove;
-  var deck = [];
-  var cursor = 0;
+  var playlist = null;
+  var pool = [];
   var wall = null;
+  var settings = null;
+  var screen = null;
+  var usingLibrary = false;
   var visualKey = '';
+  var reloadTimer = 0;
+  var note = null;
 
   var SAMPLE_COLORS = ['#5c7a8a', '#ba9a70', '#6e7d5a', '#8a6256', '#3e4a55', '#7d6a86', '#4f6f64', '#a98467'];
 
@@ -23,7 +28,7 @@
     return items;
   }
 
-  function svgUrl(asset) {
+  function sampleUrl(asset) {
     var width = asset.width || 1600;
     var height = asset.height || 1000;
     var label = String(asset.label || '').replace(/[<>&]/g, '');
@@ -34,59 +39,119 @@
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  function requestNext(prefer) {
-    if (!deck.length) return null;
-    for (var n = 0; n < deck.length; n++) {
-      var asset = deck[(cursor + n) % deck.length];
-      var shape = Alcove.layouts.orientationOf(asset);
-      var fits = !prefer || prefer === 'any' || shape === 'unknown' || shape === 'square' || shape === prefer;
-      if (fits) {
-        cursor = (cursor + n + 1) % deck.length;
-        return asset;
-      }
+  function useSamples() {
+    usingLibrary = false;
+    pool = sampleDeck();
+    playlist = Alcove.createPlaylist(pool);
+    if (note) {
+      note.hidden = false;
+      note.textContent = 'Add the Immich server and API key in settings. Press Yellow, or S on a keyboard.';
     }
-    var fallback = deck[cursor % deck.length];
-    cursor = (cursor + 1) % deck.length;
-    return fallback;
+    if (wall) wall.restart();
   }
 
-  function orientations() {
-    var list = [];
-    for (var i = 0; i < deck.length; i++) list.push(Alcove.layouts.orientationOf(deck[i]));
-    return list;
-  }
-
-  function appearance(settings) {
+  function appearance(current) {
     return [
-      settings.layout,
-      settings.intervalSec,
-      settings.crossfadeMs,
-      settings.kenBurns ? 1 : 0,
-      settings.showCaptions ? 1 : 0
+      current.layout,
+      current.intervalSec,
+      current.crossfadeMs,
+      current.kenBurns ? 1 : 0,
+      current.showCaptions ? 1 : 0
     ].join('|');
   }
 
+  function libraryInputs(current) {
+    return JSON.stringify({
+      serverUrl: current.serverUrl,
+      hasKey: current.apiKey ? 1 : 0,
+      keyLength: current.apiKey ? current.apiKey.length : 0,
+      sources: current.sources
+    });
+  }
+
+  function withSelected(items, selected) {
+    var seen = {};
+    var out = items.slice();
+    for (var i = 0; i < out.length; i++) seen[out[i].id] = true;
+    for (var j = 0; j < selected.length; j++) {
+      if (!seen[selected[j]]) out.push({ id: selected[j], label: selected[j] });
+    }
+    return out;
+  }
+
+  function reloadLibrary() {
+    if (!settings.serverUrl || !settings.apiKey) {
+      useSamples();
+      return;
+    }
+    if (note) {
+      note.hidden = false;
+      note.textContent = 'Loading photos from Immich...';
+    }
+    var requested = settings;
+    Alcove.loadLibrary(requested, root.fetch.bind(root), new Date()).then(function (result) {
+      if (libraryInputs(settings) !== libraryInputs(requested)) return;
+      if (screen) {
+        screen.setCatalogs({
+          albums: withSelected(result.catalogs.albums, settings.sources.albums),
+          people: withSelected(result.catalogs.people, settings.sources.people),
+          folders: withSelected(result.catalogs.folders, settings.sources.folders)
+        });
+      }
+      pool = result.assets;
+      playlist = Alcove.createPlaylist(pool);
+      usingLibrary = true;
+      if (!result.assets.length) {
+        if (note) {
+          note.hidden = false;
+          note.textContent = result.failures
+            ? 'Immich did not return photos. Open settings and test the connection.'
+            : 'No photos matched these sources. Pick an album, a person, favorites, or a folder.';
+        }
+      }
+      if (wall) wall.restart();
+    }).catch(function () {
+      if (note) {
+        note.hidden = false;
+        note.textContent = 'Immich did not return photos. Open settings and test the connection.';
+      }
+    });
+  }
+
+  function scheduleReload() {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(reloadLibrary, 350);
+  }
+
   function boot() {
-    deck = sampleDeck();
     var store = Alcove.createSettingsStore(root.localStorage);
-    var settings = store.load();
+    settings = store.load();
+    note = document.getElementById('frame-note');
     var frame = document.getElementById('frame');
-    var note = document.getElementById('frame-note');
+    pool = sampleDeck();
+    playlist = Alcove.createPlaylist(pool);
     wall = Alcove.createWall({
       rootEl: document.getElementById('tiles'),
       getSettings: function () { return settings; },
-      requestNext: requestNext,
+      requestNext: function (prefer) { return playlist ? playlist.next(prefer) : null; },
       imageUrl: function (asset) {
         if (asset.previewUrl) return asset.previewUrl;
-        return svgUrl(asset);
+        if (asset.color) return sampleUrl(asset);
+        var copy = asset;
+        copy.caption = copy.caption || Alcove.captionFor(asset);
+        return Alcove.placeholderUrl(copy);
       },
-      orientations: orientations,
+      orientations: function () {
+        var shapes = [];
+        for (var i = 0; i < pool.length; i++) shapes.push(Alcove.layouts.orientationOf(pool[i]));
+        return shapes;
+      },
       onShown: function () {
-        if (note) note.hidden = true;
+        if (usingLibrary && playlist && playlist.size() && note) note.hidden = true;
       }
     });
 
-    var screen = Alcove.createSettingsScreen({
+    screen = Alcove.createSettingsScreen({
       rootEl: document.getElementById('settings'),
       navEl: document.getElementById('settings-nav'),
       paneEl: document.getElementById('settings-pane'),
@@ -94,13 +159,16 @@
       store: store,
       fetch: root.fetch.bind(root),
       onChange: function (next) {
+        var previousLook = appearance(settings);
+        var previousLibrary = libraryInputs(settings);
         settings = next;
-        var nextKey = appearance(settings);
-        if (wall && nextKey !== visualKey) {
-          visualKey = nextKey;
+        if (appearance(settings) !== previousLook && wall) {
+          visualKey = appearance(settings);
           wall.restart();
         }
+        if (libraryInputs(settings) !== previousLibrary) scheduleReload();
       },
+      onConnect: function () { reloadLibrary(); },
       onOpen: function () {
         if (wall) wall.pause();
       },
@@ -120,14 +188,18 @@
     frame.hidden = false;
     wall.start();
     if (!settings.serverUrl || !settings.apiKey) {
-      if (note) {
-        note.hidden = false;
-        note.textContent = 'Add the Immich server and API key in settings. Press Yellow, or S on a keyboard.';
-      }
+      useSamples();
       screen.open();
+    } else {
+      reloadLibrary();
     }
 
-    root.AlcoveApp = { screen: screen, store: store, wall: wall };
+    root.AlcoveApp = {
+      screen: screen,
+      store: store,
+      wall: wall,
+      playlist: function () { return playlist; }
+    };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
