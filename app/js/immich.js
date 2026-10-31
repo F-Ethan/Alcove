@@ -86,13 +86,24 @@
         headers['Content-Type'] = 'application/json';
         init.body = JSON.stringify(body);
       }
-      return fetchImpl(base + path, init).then(function (response) {
-        if (!response.ok) {
-          var error = new Error('Immich request failed');
-          error.status = response.status;
-          throw error;
+      function once() {
+        return fetchImpl(base + path, init).then(function (response) {
+          if (!response.ok) {
+            var error = new Error('Immich request failed');
+            error.status = response.status;
+            throw error;
+          }
+          return response.json();
+        });
+      }
+      if (!Alcove.retry) return once();
+      return Alcove.retry(once, {
+        tries: 3,
+        baseMs: 600,
+        maxMs: 8000,
+        retryOn: function (error) {
+          return !(error && error.status >= 400 && error.status < 500);
         }
-        return response.json();
       });
     }
 

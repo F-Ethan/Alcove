@@ -74,33 +74,98 @@
       revokeUrl: options.revokeUrl || function (url) { root.URL.revokeObjectURL(url); }
     });
 
-    function urlFor(asset) {
+    var store = options.store;
+
+    function endpoint(asset) {
       var base = Alcove.util.apiBase(options.serverUrl());
+      return base + '/assets/' + encodeURIComponent(asset.id) + '/thumbnail?size=preview';
+    }
+
+    function fetchBlob(asset) {
       var key = options.apiKey();
-      if (!base || !key || !asset || !asset.id) {
+      function once() {
+        return options.fetch(endpoint(asset), {
+          method: 'GET',
+          headers: {
+            'Accept': 'image/jpeg,image/webp,image/*',
+            'x-api-key': key
+          }
+        }).then(function (response) {
+          if (!response.ok) {
+            var error = new Error('Preview request failed');
+            error.status = response.status;
+            throw error;
+          }
+          return response.blob();
+        });
+      }
+      if (!Alcove.retry) return once();
+      return Alcove.retry(once, {
+        tries: 3,
+        baseMs: 400,
+        maxMs: 8000,
+        retryOn: function (error) {
+          return !(error && error.status >= 400 && error.status < 500);
+        }
+      });
+    }
+
+    function deliver(asset, blob, offline) {
+      if (offline && options.onOffline) options.onOffline(true);
+      if (!offline && options.onOnline) options.onOnline();
+      if (store && !offline) store.put(asset.id, blob);
+      return { url: pool.hold(asset.id, blob), pinned: true };
+    }
+
+    function fromNetwork(asset) {
+      return fetchBlob(asset).then(function (blob) {
+        return deliver(asset, blob, false);
+      }).catch(function () {
+        if (!store) return Promise.reject(new Error('no preview'));
+        return store.get(asset.id).then(function (cached) {
+          var choice = Alcove.choosePreview(null, cached);
+          if (!choice) return Promise.reject(new Error('no preview'));
+          return deliver(asset, choice.blob, true);
+        });
+      });
+    }
+
+    function urlFor(asset) {
+      if (!asset || !asset.id || !Alcove.util.apiBase(options.serverUrl()) || !options.apiKey()) {
         return Promise.resolve({ url: '', pinned: false });
       }
-      var endpoint = base + '/assets/' + encodeURIComponent(asset.id) + '/thumbnail?size=preview';
-      return options.fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Accept': 'image/jpeg,image/webp,image/*',
-          'x-api-key': key
-        }
-      }).then(function (response) {
-        if (!response.ok) {
-          var error = new Error('Preview request failed');
-          error.status = response.status;
-          throw error;
-        }
-        return response.blob();
-      }).then(function (blob) {
-        return { url: pool.hold(asset.id, blob), pinned: true };
-      });
+      if (store && store.has && store.has(asset.id)) {
+        return store.get(asset.id).then(function (blob) {
+          if (!blob) return fromNetwork(asset);
+          return deliver(asset, blob, false);
+        });
+      }
+      return fromNetwork(asset);
+    }
+
+    function preload(assets) {
+      var list = (assets || []).slice(0, options.preload || 8);
+      var chain = Promise.resolve();
+      for (var i = 0; i < list.length; i++) {
+        chain = chain.then(preloadOne(list[i]));
+      }
+      return chain;
+    }
+
+    function preloadOne(asset) {
+      return function () {
+        if (!asset || !asset.id) return null;
+        if (store && store.has && store.has(asset.id)) return null;
+        return fetchBlob(asset).then(function (blob) {
+          if (store) return store.put(asset.id, blob);
+          return null;
+        }).catch(function () { return null; });
+      };
     }
 
     return {
       urlFor: urlFor,
+      preload: preload,
       release: function (asset) {
         if (asset && asset.id) pool.release(asset.id);
       },
