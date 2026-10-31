@@ -3,6 +3,7 @@
   var playlist = null;
   var pool = [];
   var wall = null;
+  var loader = null;
   var settings = null;
   var screen = null;
   var rawAssets = [];
@@ -91,6 +92,7 @@
   function publish(assets, failures) {
     rawAssets = assets || [];
     pool = Alcove.filters.apply(rawAssets, settings, excludeMap());
+    for (var n = 0; n < pool.length; n++) pool[n].caption = Alcove.captionFor(pool[n]);
     playlist = Alcove.createPlaylist(pool);
     usingLibrary = true;
     if (!pool.length && note) {
@@ -142,9 +144,18 @@
 
   function reloadLibrary() {
     if (!settings.serverUrl || !settings.apiKey) {
+      if (loader) loader.releaseAll();
+      loader = null;
       useSamples();
       return;
     }
+    if (loader) loader.releaseAll();
+    loader = Alcove.createImageLoader({
+      serverUrl: function () { return settings.serverUrl; },
+      apiKey: function () { return settings.apiKey; },
+      fetch: root.fetch.bind(root),
+      max: 24
+    });
     if (note) {
       note.hidden = false;
       note.textContent = 'Loading photos from Immich...';
@@ -186,11 +197,15 @@
       getSettings: function () { return settings; },
       requestNext: function (prefer) { return playlist ? playlist.next(prefer) : null; },
       imageUrl: function (asset) {
-        if (asset.previewUrl) return asset.previewUrl;
+        asset.caption = asset.caption || Alcove.captionFor(asset);
         if (asset.color) return sampleUrl(asset);
-        var copy = asset;
-        copy.caption = copy.caption || Alcove.captionFor(asset);
-        return Alcove.placeholderUrl(copy);
+        if (!loader) return { url: Alcove.placeholderUrl(asset), pinned: false };
+        return loader.urlFor(asset).catch(function () {
+          return { url: Alcove.placeholderUrl(asset), pinned: false };
+        });
+      },
+      release: function (asset) {
+        if (loader) loader.release(asset);
       },
       orientations: function () {
         var shapes = [];

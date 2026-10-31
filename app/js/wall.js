@@ -30,7 +30,21 @@
       rootEl.style.setProperty('--fade', (current.crossfadeMs || 0) + 'ms');
     }
 
+    function releaseHeld(asset) {
+      if (asset && opts.release) opts.release(asset);
+    }
+
+    function dropTile(tile) {
+      clearTimer(tile);
+      if (!tile.layerHeld) return;
+      if (tile.layerHeld[0]) releaseHeld(tile.layerAssets[0]);
+      if (tile.layerHeld[1]) releaseHeld(tile.layerAssets[1]);
+      tile.layerHeld = [false, false];
+      tile.layerAssets = [null, null];
+    }
+
     function build(orientations) {
+      for (var t = 0; t < tiles.length; t++) dropTile(tiles[t]);
       clearTimers();
       rootEl.innerHTML = '';
       tiles = [];
@@ -66,7 +80,9 @@
           asset: null,
           seq: 0,
           timer: 0,
-          primed: false
+          primed: false,
+          layerAssets: [null, null],
+          layerHeld: [false, false]
         });
       }
       applyMotion();
@@ -78,7 +94,7 @@
       return '';
     }
 
-    function reveal(tile, asset, url) {
+    function reveal(tile, asset, url, pinned) {
       var incomingIndex = tile.front === 0 ? 1 : 0;
       var incoming = tile.layers[incomingIndex];
       var outgoing = tile.layers[tile.front];
@@ -87,6 +103,11 @@
       outgoing.style.transitionDuration = fade + 'ms';
       var text = captionText(asset);
       function finish() {
+        var previous = tile.layerAssets[incomingIndex];
+        var previousHeld = tile.layerHeld[incomingIndex];
+        tile.layerAssets[incomingIndex] = asset;
+        tile.layerHeld[incomingIndex] = !!pinned;
+        if (previousHeld) releaseHeld(previous);
         incoming.classList.add('on');
         outgoing.classList.remove('on');
         tile.front = incomingIndex;
@@ -106,6 +127,9 @@
       }
       incoming.onload = once;
       incoming.onerror = function () {
+        if (done) return;
+        done = true;
+        if (pinned) releaseHeld(asset);
         if (opts.onImageError) opts.onImageError(asset);
       };
       incoming.src = url;
@@ -116,14 +140,19 @@
       if (!asset) return;
       var seq = ++tile.seq;
       var request = opts.imageUrl ? opts.imageUrl(asset) : Promise.resolve('');
-      Promise.resolve(request).then(function (url) {
-        if (seq !== tile.seq) return;
+      Promise.resolve(request).then(function (result) {
+        var url = result && typeof result === 'object' && result.url != null ? result.url : result;
+        var pinned = !!(result && typeof result === 'object' && result.pinned);
+        if (seq !== tile.seq) {
+          if (pinned) releaseHeld(asset);
+          return;
+        }
         if (pushHistory && tile.asset) {
           tile.history.push(tile.asset);
           if (tile.history.length > 12) tile.history.shift();
         }
         tile.asset = asset;
-        reveal(tile, asset, url);
+        reveal(tile, asset, url, pinned);
       }).catch(function () {
         if (opts.onImageError) opts.onImageError(asset);
       });
