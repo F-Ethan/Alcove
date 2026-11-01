@@ -7,7 +7,7 @@ const Alcove = loadAlcove(['util.js', 'settings.js', 'probe.js']);
 test('settings merge clamps values and keeps secrets out of the redacted copy', function () {
   const saved = Alcove.mergeSettings({
     serverUrl: 'http://192.168.1.66:2283/',
-    apiKey: 'super-secret',
+    apiKey: 'Abcd1234Abcd1234Abcd1234Abcd1234Abcd1234Abc',
     sources: { favorites: false, albums: ['a', 'a', ''] },
     layout: 'nope',
     intervalSec: 1,
@@ -23,15 +23,16 @@ test('settings merge clamps values and keeps secrets out of the redacted copy', 
   assert.equal(saved.filters.junk.queries.join('|'), 'blurry photo|black photo');
   const redacted = Alcove.redactSettings(saved);
   assert.equal(redacted.apiKey, '***');
-  assert.equal(JSON.stringify(redacted).includes('super-secret'), false);
+  assert.equal(JSON.stringify(redacted).includes('Abcd1234Abcd1234'), false);
 });
 
 test('settings round-trip through local storage', function () {
   const storage = memoryStorage();
   const store = Alcove.createSettingsStore(storage);
-  store.save({ serverUrl: 'http://192.168.1.66:2283', apiKey: 'abc', decoration: 'fall' });
+  const validKey = 'Abcd1234Abcd1234Abcd1234Abcd1234Abcd1234Abc';
+  store.save({ serverUrl: 'http://192.168.1.66:2283', apiKey: validKey, decoration: 'fall' });
   const loaded = store.load();
-  assert.equal(loaded.apiKey, 'abc');
+  assert.equal(loaded.apiKey, validKey);
   assert.equal(loaded.decoration, 'fall');
   assert.equal(loaded.sources.favorites, true);
 });
@@ -39,6 +40,8 @@ test('settings round-trip through local storage', function () {
 test('connection probe separates a bad key, CORS, and an offline server', function () {
   assert.equal(Alcove.classifyProbe({ ok: true }).code, 'ok');
   assert.equal(Alcove.classifyProbe({ ok: false, status: 401 }).code, 'auth');
+  assert.equal(Alcove.classifyProbe({ ok: false, status: 401 }).message, 'The API key was refused.');
+  assert.equal(Alcove.classifyProbe({ ok: false, status: 403 }).code, 'forbidden');
   assert.equal(Alcove.classifyProbe({ ok: false, corsBlocked: true }).code, 'cors');
   assert.equal(Alcove.classifyProbe({ ok: false }).code, 'offline');
   assert.equal(Alcove.util.apiBase('http://192.168.1.66:2283/api'), 'http://192.168.1.66:2283/api');

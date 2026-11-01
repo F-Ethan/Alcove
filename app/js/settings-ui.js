@@ -57,7 +57,7 @@
       var key = source;
       var label = source === 'navidrome' ? 'Navidrome' : 'Jellyfin';
       rows.push(
-        { id: key + 'Url', kind: 'text', label: label + ' URL', path: ['music', key, 'url'], placeholder: source === 'navidrome' ? 'http://192.168.1.66:4533' : 'http://192.168.1.66:8096' },
+        { id: key + 'Url', kind: 'text', label: label + ' URL', path: ['music', key, 'url'], placeholder: source === 'navidrome' ? 'http://192.168.x.x:4533' : 'http://192.168.x.x:8096' },
         { id: key + 'User', kind: 'text', label: 'Username', path: ['music', key, 'username'] },
         { id: key + 'Pass', kind: 'secret', label: 'Password', path: ['music', key, 'password'], help: 'Stored on this TV. Alcove does not write it to the log.' },
         { id: 'testMusic', kind: 'button', label: 'Test music', help: 'Loads playlists so you can assign one to each season.' }
@@ -112,16 +112,16 @@
             kind: 'text',
             label: 'Server URL',
             path: ['serverUrl'],
-            placeholder: 'http://192.168.1.66:2283',
+            placeholder: 'http://192.168.x.x:2283',
             help: 'Typed on the TV and saved on this set. Change it if the laptop gets a new address.'
           },
           {
             id: 'apiKey',
-            kind: 'secret',
+            kind: 'key',
             label: 'API key',
             path: ['apiKey'],
             placeholder: 'Paste or type the key',
-            help: 'Use a read-only key: asset.read, asset.view, album.read, person.read, folder.read, memory.read, tag.read. The key stays on the TV.'
+            help: 'Shown in plain text so a long key is easier to type. Right moves to Show or Hide. Create it in Immich under Account Settings, API Keys.'
           },
           {
             id: 'test',
@@ -331,6 +331,13 @@
             label: 'Burn-in avoidance',
             path: ['burnInAvoidance'],
             help: 'Slowly shifts the clock and captions so they do not sit on the same pixels.'
+          },
+          {
+            id: 'keepAwake',
+            kind: 'bool',
+            label: 'Keep TV awake',
+            path: ['keepAwake'],
+            help: 'Stops the webOS screensaver while the wall is showing. On by default.'
           }
         ]
       },
@@ -383,6 +390,7 @@
     var rowIndex = 0;
     var pickIndex = 0;
     var editing = false;
+    var revealed = {};
     var navEl = opts.navEl;
     var paneEl = opts.paneEl;
     var statusEl = opts.statusEl;
@@ -407,6 +415,8 @@
       var target = null;
       if (mode === 'picker') {
         target = paneEl.querySelector('[data-pick="' + pickIndex + '"]');
+      } else if (mode === 'reveal') {
+        target = paneEl.querySelector('[data-row="' + rowIndex + '"] .reveal-toggle');
       } else if (mode === 'rows' || editing) {
         target = paneEl.querySelector('[data-row="' + rowIndex + '"]');
       } else {
@@ -441,6 +451,16 @@
       };
     }
 
+    function shown(row) {
+      if (row.kind === 'key') return revealed[row.id] !== false;
+      if (row.kind === 'secret') return revealed[row.id] === true;
+      return true;
+    }
+
+    function hasToggle(row) {
+      return row && (row.kind === 'key' || row.kind === 'secret');
+    }
+
     function renderRows() {
       paneEl.innerHTML = '';
       var rows = currentSection().rows;
@@ -458,8 +478,10 @@
       if (row.kind === 'text' || row.kind === 'secret' || row.kind === 'lines') {
         var input = document.createElement(row.kind === 'lines' ? 'textarea' : 'input');
         input.className = 'row-input';
-        if (row.kind === 'secret') input.type = 'password';
-        else if (row.kind !== 'lines') input.type = 'text';
+        if (row.kind === 'lines') {
+          input.rows = 4;
+        } else if (hasToggle(row) && !shown(row)) input.type = 'password';
+        else input.type = 'text';
         input.autocomplete = 'off';
         input.spellcheck = false;
         input.placeholder = row.placeholder || '';
@@ -484,6 +506,19 @@
           }
         });
         wrap.appendChild(input);
+        if (hasToggle(row)) {
+          var toggle = el('button', 'reveal-toggle', shown(row) ? 'Hide' : 'Show');
+          toggle.type = 'button';
+          toggle.setAttribute('data-reveal', row.id);
+          toggle.addEventListener('click', function (event) {
+            if (event.stopPropagation) event.stopPropagation();
+            revealed[row.id] = !shown(row);
+            rowIndex = index;
+            mode = 'reveal';
+            render();
+          });
+          wrap.appendChild(toggle);
+        }
       } else {
         wrap.appendChild(el('div', 'row-value', formatValue(row, row.path ? readPath(settings, row.path) : '', catalogs)));
       }
@@ -497,6 +532,17 @@
     }
 
     function commitInput(row, raw) {
+      if (row.kind === 'key') {
+        var check = Alcove.inspectApiKey(raw);
+        if (!check.ok) {
+          setStatus(check.message);
+          return;
+        }
+        writePath(settings, row.path, check.value);
+        persist();
+        if (check.empty) setStatus('Enter an API key. A read-only key is enough.');
+        return;
+      }
       if (row.kind === 'lines') writePath(settings, row.path, raw);
       else writePath(settings, row.path, raw);
       persist();
@@ -636,7 +682,7 @@
         render();
         return;
       }
-      if (row.kind === 'text' || row.kind === 'secret' || row.kind === 'lines') {
+      if (row.kind === 'text' || row.kind === 'secret' || row.kind === 'key' || row.kind === 'lines') {
         var input = paneEl.querySelector('[data-input="' + row.id + '"]');
         if (input) {
           editing = true;
@@ -681,11 +727,19 @@
           return true;
         }
       }
+      if (mode === 'reveal' && (event.key === 'Enter' || event.keyCode === 13)) {
+        var revealRow = currentSection().rows[rowIndex];
+        if (revealRow) revealed[revealRow.id] = !shown(revealRow);
+        render();
+        return true;
+      }
       if (event.key === 'ArrowUp' || event.keyCode === 38) {
+        if (mode === 'reveal') mode = 'rows';
         move(-1);
         return true;
       }
       if (event.key === 'ArrowDown' || event.keyCode === 40) {
+        if (mode === 'reveal') mode = 'rows';
         move(1);
         return true;
       }
@@ -744,12 +798,24 @@
         } else flipPick();
         return;
       }
+      if (mode === 'reveal') {
+        if (direction < 0) {
+          mode = 'rows';
+          applyFocus();
+        }
+        return;
+      }
       var row = currentSection().rows[rowIndex];
+      if (direction > 0 && hasToggle(row)) {
+        mode = 'reveal';
+        applyFocus();
+        return;
+      }
       if (!cycle(row, direction)) {
         if (direction < 0) {
           mode = 'sections';
           render();
-        } else if (row.kind === 'multi' || row.kind === 'one' || row.kind === 'text' || row.kind === 'secret' || row.kind === 'lines' || row.kind === 'button') {
+        } else if (row.kind === 'multi' || row.kind === 'one' || row.kind === 'text' || row.kind === 'key' || row.kind === 'secret' || row.kind === 'lines' || row.kind === 'button') {
           activateRow();
         }
       }

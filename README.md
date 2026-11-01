@@ -1,216 +1,239 @@
 # Alcove
 
-Alcove is an ambient photo frame for an LG webOS TV. It plays stills from a self-hosted Immich server on the home LAN, and it can play music from Navidrome, Jellyfin, or a stream URL you type on the TV.
+Alcove is a photo frame for an LG TV. It hangs stills from your own Immich server on the wall, the way a frame sits in a room. You sideload it with LG's developer tools. You do not need a listing in the LG Content Store.
 
-The server address, API key, and music password are typed on the TV and stored in the app's local storage. None of those belong in this repo.
+## What it does
+
+- **Layouts.** Single, 2-up, 3-up mosaic, 4-grid, and a mixed collage. Each frame follows the photo. A landscape stays landscape, a portrait stays portrait, and nothing is cropped into the wrong shape. The collage hangs about five prints with air around them: one large portrait, a landscape at about half that size, and three smaller prints toward the corners. The clock sits in a clear spot at the bottom right.
+- **Seasonal themes.** Auto follows the date. You can also pick Christmas, winter, fall, spring, summer, or none. Christmas uses wrapping paper behind the prints, with a ribbon and a bow on the mat, not across the photo. Auto treats December 1 through January 6 as Christmas.
+- **Smart filtering.** All photos, favorites, albums, people, folders, and On this day. Optional filters drop screenshots, tiny photos, low star ratings, a tag you name, and the top matches from Immich smart search (blurry, receipts, and similar).
+- **Optional music.** Off until you turn it on. Navidrome, Jellyfin, or an internet radio URL. A playlist or stream can follow the season.
+- **Keep awake.** On by default. Alcove asks webOS not to start the screensaver while the wall is up.
+
+Photos change on their own, with a slow crossfade and a gentle Ken Burns move. A clock, captions, night dimming, and a slow shift that helps with burn-in are included.
 
 ## What you need
 
-- An LG TV. This build targets webOS 25 (2025 models, the webOS 10 era). The page also runs on webOS 6 and newer. webOS 4 and older are outside the target.
-- Immich on the laptop, at a URL the TV can open, such as `http://192.168.1.66:2283`.
-- A Mac with Node.js 18 or newer, for the webOS CLI.
-- The TV and the laptop on the same LAN. The TV does not use Tailscale, so the URL has to be a LAN address.
+1. **An Immich server the TV can reach.** On the home network that is a LAN address, for example `http://192.168.x.x:2283`. A trailing `/api` is optional. If the TV reaches Immich through a reverse proxy, Tailscale, or another remote path, use the `https://` address that path already serves. The TV has to trust the certificate. A self-signed certificate that the TV does not trust will fail the same way a dead server does. Alcove does not add its own TLS.
+2. **An LG TV on webOS.** This build was tried on a 2025 set running webOS 25. Installed apps on that version can call Immich directly. Older sets sometimes block the response (CORS). The connection test says so, and sample proxy configs live in `proxy/`.
+3. **A computer with Node.js 18 or newer.** That is where you build the package and talk to the TV. macOS, Linux, and Windows all work with the same commands.
+4. **The LG Developer Mode app**, from the LG Content Store, signed in with an [LG developer account](https://webostv.developer.lge.com). Developer Mode is a session. It expires. When it expires, webOS removes sideloaded apps, including Alcove. Extend the session before that happens. The steps are below.
 
-Installed apps on webOS 25 call Immich directly. Immich does not send CORS headers. Older webOS still enforces CORS. The connection test in settings tells you when that happens, and the proxy samples below are the fallback.
+The server address and API key can be typed on the TV. They can also be baked into the package from a file that stays on your computer. Neither belongs in git. This repository is public.
 
-## Install the webOS CLI on a Mac
+## Create an Immich API key
+
+An API key is not your Immich password. Immich keys are long strings of letters, digits, `_`, and `-`, usually around 40 characters or more. Alcove rejects anything shorter than 30 characters, anything with a space, and anything outside that character set, and it tells you it looks like a password.
+
+1. Open Immich in a browser and sign in.
+2. Open **Account Settings**, then **API Keys**.
+3. Create a key and enable only these permissions. They match the calls Alcove makes:
+
+   - `asset.read` for search (all photos, favorites, albums, people, and the smart-search junk list)
+   - `asset.view` for preview thumbnails
+   - `album.read` for the album list
+   - `person.read` for the people list
+   - `folder.read` for the folder list and folder photos
+   - `memory.read` for On this day
+   - `tag.read` so tag names are available for the exclude-tag filter
+   - `user.read` for the connection test, which calls `GET /api/users/me`
+
+4. Copy the key once and store it somewhere private. Never commit it, and never paste it into a pull request, a screenshot, or `app/config.local.example.json`.
+
+If your Immich build only offers a single permission named `all`, that key works too. Newer servers list the names above one by one. `user.read` is what `GET /api/users/me` asks for, so Test connection returns 403 without it even when the photo permissions are already on.
+
+## Set up the TV
+
+1. On the TV, install **Developer Mode** from the LG Content Store.
+2. Sign in. If you need an account, create one at https://webostv.developer.lge.com.
+3. Turn **Dev Mode Status** on. The TV reboots.
+4. Open Developer Mode again. Write down the **IP address** and the passphrase. Leave this screen up. Turn **Key Server** on when the computer asks for the key.
+5. Note the time left under **Remain Session**. The session lasts up to 1000 hours. Extend it from the **EXTEND** button on the TV, or later from the computer:
 
 ```bash
-npm install -g @webos-tools/cli@3.2.6
+ares-launch com.palmdts.devmode -p '{"extend":true}' -d lg-tv
 ```
 
-The project also depends on that CLI, so `npm run package` works after `npm install` in this repo.
+If the session hits zero, or the TV reboots ten times while Developer Mode cannot reach the network, Developer Mode turns off and Alcove is removed. Extend it while the TV is on the network, including before you travel.
 
-## Turn on Developer Mode
-
-1. On the TV, open the LG Content Store and install **Developer Mode**.
-2. Sign in with your LG developer account. Create one at https://webostv.developer.lge.com if you need it.
-3. Open Developer Mode and turn **Dev Mode Status** on. The TV reboots.
-4. Open Developer Mode again. Note the IP address and the 6-character passphrase. Turn **Key Server** on when the Mac asks for the key.
-
-The session lasts up to 1000 hours. The app shows the time left in **Remain Session**. Extend it while the TV is on the network, from the EXTEND button on the TV, or from the Mac:
+On the computer, install the webOS CLI. This project was checked with version 3.2.6, which is also the version `npm install` pulls in for packaging:
 
 ```bash
-ares-launch com.palmdts.devmode -p '{"extend":true}' -d living-room
+npm i -g @webos-tools/cli@3.2.6
 ```
 
-When the session hits zero, or the TV reboots ten times while it is off the network, Developer Mode turns off and the sideloaded app is removed. Extend the session before you travel.
-
-## Add the TV
+Add the TV. The name `lg-tv` is only a label on your computer. Use another name if you prefer, and use that same name in every command below.
 
 ```bash
 ares-setup-device
 ```
 
-Choose **add** and enter:
+Choose **add** and answer the prompts:
 
 | Prompt | Value |
 | --- | --- |
-| Device name | `living-room` |
+| Device name | `lg-tv` |
 | IP address | the address shown in Developer Mode |
 | Port | `9922` |
 | SSH user | `prisoner` |
 | Default | yes |
 
-On the TV, press **Key Server**. Then on the Mac:
+On the TV, turn **Key Server** on. Then fetch the key and confirm the set answers. Type the passphrase exactly as the TV shows it.
 
 ```bash
-ares-novacom --device living-room --getkey
-ares-device --system-info --device living-room
+ares-novacom --device lg-tv --getkey
+ares-device --system-info --device lg-tv
 ```
 
-Type the passphrase exactly as the TV shows it. `ares-device` prints the model and webOS version when the key is in place.
+`ares-device` prints the model and the webOS version when the key is in place.
 
-## Build, install, and launch
-
-From this repo:
+## Build and install
 
 ```bash
+git clone https://github.com/F-Ethan/Alcove.git
+cd Alcove
 npm install
-npm test
-npm run package
-ares-install --device living-room dist/com.ethan.alcove_1.0.0_all.ipk
-ares-launch --device living-room com.ethan.alcove
 ```
 
-`npm run package` runs `ares-package ./app -o dist --no-minify` and writes `dist/com.ethan.alcove_1.0.0_all.ipk`.
+You can skip the next file and type the server URL and key on the TV instead. To avoid the on-screen keyboard, copy the example and edit the copy before you package:
+
+```bash
+cp app/config.local.example.json app/config.local.json
+```
+
+`app/config.local.json` is gitignored. `npm run package` packs the `app` folder, so the file is inside the ipk when it is present. The example file is only a shape. Its key is a short placeholder, and Alcove ignores a placeholder that fails the key check.
+
+```json
+{
+  "serverUrl": "http://192.168.x.x:2283",
+  "apiKey": "paste-your-immich-api-key"
+}
+```
+
+Replace both values with your server and the key you just created. `serverUrl` must start with `http://` or `https://`. A value you later save on the TV wins. The file fills only a blank server URL or a blank API key.
+
+Package, install, and launch:
+
+```bash
+npm run package
+ares-install --device lg-tv dist/com.ethan.alcove_1.0.0_all.ipk
+ares-launch --device lg-tv com.ethan.alcove
+```
+
+`npm run package` runs `ares-package ./app -o dist --no-minify` and writes `dist/com.ethan.alcove_1.0.0_all.ipk`. The app id is `com.ethan.alcove`.
 
 Launch it again later with:
 
 ```bash
-ares-launch --device living-room com.ethan.alcove
+ares-launch --device lg-tv com.ethan.alcove
 ```
 
 Remove it with:
 
 ```bash
-ares-install --device living-room --remove com.ethan.alcove
+ares-install --device lg-tv --remove com.ethan.alcove
 ```
 
-## First launch
+## First run
 
-Press **Yellow** for settings. A USB keyboard can press **S**.
+Settings open on their own when the server URL or the API key is missing. After that, **Yellow** opens settings. A USB keyboard can press **S**.
 
-- Server URL: `http://192.168.1.66:2283`. A trailing `/api` is optional.
-- All photos is on by default. That is a random sample of the library, so the wall still fills when you have no favorites. If the wall is empty, it lists how many photos each source returned, how many each filter removed, and any HTTP error such as a missing API permission.
-- API key: type it with the on-screen keyboard.
+The on-screen hint on the wall is: Yellow opens settings. OK pauses.
 
-In Immich, open Account settings, API Keys, and create a key with only these permissions:
-
-- `asset.read`
-- `asset.view` (thumbnail previews)
-- `album.read`
-- `person.read`
-- `folder.read`
-- `memory.read`
-- `tag.read`
-
-The key stays on the TV. Alcove sends it as the `x-api-key` header and does not print it.
-
-While the frame is up:
-
-| Key | Action |
+| Key | On the wall |
 | --- | --- |
 | Right | Next photos |
 | Left | Previous photos |
 | OK | Pause or resume |
 | Yellow | Settings |
-| Back | Close settings, or leave the app for the TV home |
+| Back | Leave the app for the TV home |
 | Blue | Mute or unmute music |
 
-Arrows, OK, and Back inside settings change rows, edit a value, and step back. Left and right change numbers and lists.
+Inside settings, Up and Down move. Left and Right change a number or a choice. OK runs a button, focuses a text field, or opens a picker. Back steps out of a picker, then closes settings.
 
-## Keep the laptop address stable
+On the **Immich** page:
 
-`192.168.1.66` is a DHCP address and it can move. On the router, reserve that address for the laptop's Wi-Fi MAC. If it still changes, edit the server URL on the TV. Alcove keeps the last photos on screen while the laptop is unreachable and tries again with backoff.
+1. Set **Server URL** to the address the TV can open, such as `http://192.168.x.x:2283`.
+2. Set **API key**. The field is plain text so a long key is easier to check. Press Right to move to **Show** or **Hide**, then OK to toggle it. Music passwords stay hidden until you do the same.
+3. Run **Test connection**. A good key says **Connected.** and Alcove starts loading the library.
 
-## CORS proxy
+On the **Sources** page, **All photos** and **Favorites** start on. All photos is a random sample of the library (250 photos), so the wall can fill even when you have no favorites. **On this day** starts off. Albums, people, and folders start empty. Open one of those rows after a successful test, then pick items with OK. If a list says nothing is loaded yet, run Test connection and open it again.
 
-On webOS 25 the installed app is allowed to read Immich's responses. On older firmware the TV can reach the server and still block the response, because Immich does not send `Access-Control-Allow-Origin`. Settings says so when a no-cors probe succeeds and the real request fails.
+The other pages are Layout, Decorations, Filters, Display, and Music. **Keep TV awake** is on the Display page and starts on.
 
-Run one of the sample proxies on the laptop and point Alcove at it, for example `http://192.168.1.66:2284`.
+## Optional music
 
-- `proxy/Caddyfile` listens on port 2284 and forwards to Immich on 2283.
-- `proxy/nginx.conf` does the same.
+Music stays off until you enable **Background music**. Pick a source:
 
-The key is a header, so the wildcard origin is enough. Restart Caddy or nginx after you copy the file, and open the proxy URL once from a laptop browser to confirm Immich answers.
+- **Navidrome.** Set the URL (often `http://192.168.x.x:4533`), the username, and the password. Run **Test music**. That loads playlists. Assign one playlist to each season you care about: Christmas, winter, fall, spring, summer, and one for when decorations are off. With decorations on Auto, Christmas (December 1 through January 6) uses the Christmas playlist, and the other seasons follow the date. Alcove talks to Navidrome through the Subsonic API. The password is stored on the TV and is not written to the log.
+- **Jellyfin.** Same idea, with the Jellyfin URL (often `http://192.168.x.x:8096`), username, and password. Alcove signs in when playback starts and keeps that access token in memory for the session.
+- **Internet radio.** Add up to 8 streams. Each row is a name, a URL, and a season. MP3 or AAC is the reliable choice. Leave a URL empty to skip that row. A stream tied to the current season wins. Otherwise a stream marked for any season is used. The rows start empty so a dead station is not baked in.
 
-Caddy:
+Tracks shuffle, loop, and crossfade. Night dimming lowers the music with the picture. There is no YouTube source.
+
+## Troubleshooting
+
+**"That looks like a password, not an API key."** The text is shorter than 30 characters, has a space, or has a character other than letters, digits, `_`, and `-`. Create a key under Account Settings, API Keys. Do not type your Immich password.
+
+**"The API key was refused."** Immich returned 401. The key was mistyped, revoked, or is not the key Immich issued. Create a new one and paste it again. Check Show so you can see the whole string.
+
+**"A permission is missing."** Immich returned 403. The key signed in, and one of the permissions in the list above is off. Edit the key in Immich and enable the one you skipped. `user.read` is the one the connection test needs. The others are what the wall needs. An empty wall can also name the missing permission next to a source, for example `403 missing permission asset.read`.
+
+**The wall is empty.** A note on the frame lists each source, how many photos it returned, any HTTP error, how many photos the filters kept, and why the rest were dropped. Favorites can be empty if you have not starred anything. All photos should still fill the wall. If the junk filter count looks too high, turn **Smart search junk filter** off under Filters.
+
+**The TV goes to the screensaver.** Keep TV awake should be on. On webOS 25, Alcove subscribes to the TV power service and answers the screensaver request with `ack: false`. That handshake can only be confirmed on the TV. In a desktop browser, and with `?mock=1`, Alcove does not try it. If the Luna call fails on a real set, a tiny muted video plays as a fallback so the panel stays awake.
+
+**The app disappeared.** Developer Mode expired or was turned off, and webOS removed the sideload. Extend or turn the session back on, then install again with the `ares-install` command above.
+
+**The server moved.** DHCP can change a LAN address. Reserve it on the router, or edit Server URL on the TV. Alcove keeps the last photos on screen while the server is unreachable, shows **Offline**, and tries again with backoff.
+
+**CORS on an older set.** The test says the TV can reach the server but the browser blocked the response. Point Alcove at a reverse proxy that adds `Access-Control-Allow-Origin`. `proxy/Caddyfile` and `proxy/nginx.conf` listen on port 2284 and forward to Immich on 127.0.0.1:2283. webOS 25 usually does not need this.
 
 ```bash
 caddy run --config proxy/Caddyfile
 ```
 
-nginx:
-
 ```bash
 sudo nginx -c "$(pwd)/proxy/nginx.conf"
 ```
 
-The nginx file uses a prefix path under `/tmp` for its pid. Adjust `pid` if your system nginx is already running and you want this as an extra server block instead of a standalone process.
+Then set the server URL to `http://192.168.x.x:2284`.
 
-## Desktop preview
+**Update Alcove** after you pull new code. Your saved settings stay on the TV. If `app/config.local.json` changed, package again so the new file is inside the ipk. A URL or key already saved on the TV is left as-is.
+
+```bash
+git pull
+npm install
+npm run package
+ares-install --device lg-tv dist/com.ethan.alcove_1.0.0_all.ipk
+ares-launch --device lg-tv com.ethan.alcove
+```
+
+## Development
+
+From the repo:
 
 ```bash
 npm test
 npm run dev
 ```
 
-Open http://127.0.0.1:8787/?mock=1
+`npm test` runs `node --test test/*.test.js`. The tests cover the playlist, layouts, frame aspect, the API key check, the connection probe, filters, settings, and music season choice. They do not open a TV.
 
-The preview serves a small stand-in Immich so layouts, filters, and the remote keys can be tried away from the TV. It is not the home library. `?mock=1` fills the server URL with the preview origin and a stand-in key when those fields are empty.
+`npm run dev` serves the app and a small stand-in Immich on port 8787. Open:
 
-## Navidrome
-
-Music is off until you enable it in settings. Alcove can use:
-
-- Navidrome on the laptop, through the Subsonic API
-- Jellyfin, through its playlist and audio stream API
-- Internet radio: MP3 or AAC URLs you type in. HLS plays only when that TV's browser already supports it.
-
-There is no YouTube source. Alcove does not join AirPlay. A phone can AirPlay or use Bluetooth to a separate speaker if you want the sound off the TV.
-
-On the Ubuntu laptop, Navidrome in Docker:
-
-```yaml
-services:
-  navidrome:
-    image: deluan/navidrome:latest
-    user: "1000:1000"
-    ports:
-      - "4533:4533"
-    environment:
-      ND_MUSICFOLDER: /music
-      ND_DATAFOLDER: /data
-    volumes:
-      - ./music:/music
-      - ./data:/data
-    restart: unless-stopped
+```text
+http://127.0.0.1:8787/?mock=1
 ```
 
-```bash
-mkdir -p music data
-docker compose up -d
+Add `&decor=christmas` to preview the wrapping paper:
+
+```text
+http://127.0.0.1:8787/?mock=1&decor=christmas
 ```
 
-Open `http://192.168.1.66:4533`, create a user, and copy audio files into `music`. In Navidrome, build playlists for the seasons you want (Christmas, Winter, Fall, Spring, Summer, plus one for when decorations are off).
+`?mock=1` fills an empty server URL with the preview origin and a stand-in key. It is not your library. Arrow keys, Enter, and S stand in for the remote.
 
-On the TV, set the Navidrome URL, username, and password, run **Test music**, and pick one playlist per season. With decorations on Auto, Christmas (December 1 through January 6) plays the Christmas playlist, and the other seasons follow the date. Tracks shuffle, loop, and crossfade. The password stays on the TV and is not written to the log.
+`ARCHITECTURE.md` is a map of the modules if you want to change the code.
 
-Internet radio is a list of name, URL, and season. The rows start empty so a dead station is not baked in. Edit them on the TV.
-
-Jellyfin is the other server choice. It uses the same season slots. Alcove signs in when playback starts and keeps the access token in memory for that session.
-
-Night dimming lowers the music with the picture and brings it back in the morning. A dropped stream retries, then skips ahead. Two audio elements are reused, so a long session does not keep allocating players.
-
-## Tests
-
-```bash
-npm test
-```
-
-The tests cover the playlist, tile timing, filters, settings, retry, the junk list, and which playlist or stream a season selects.
-
-## Where the code lives
-
-`ARCHITECTURE.md` walks through the modules and the path from a remote key to a photo on screen.
+Icons can be regenerated with `npm run icons` (Python 3).

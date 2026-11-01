@@ -49,6 +49,7 @@
       nightStart: '22:00',
       nightEnd: '06:30',
       burnInAvoidance: true,
+      keepAwake: true,
       filters: {
         peopleOnly: false,
         minRating: 0,
@@ -130,6 +131,34 @@
     return allowed.indexOf(value) === -1 ? fallback : value;
   }
 
+  function inspectApiKey(value) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return { ok: true, empty: true, value: '', message: '' };
+    if (text.length < 30 || /[^A-Za-z0-9_-]/.test(text)) {
+      return {
+        ok: false,
+        empty: false,
+        value: '',
+        message: 'That looks like a password, not an API key. Create a key in Immich under Account Settings, API Keys.'
+      };
+    }
+    return { ok: true, empty: false, value: text, message: '' };
+  }
+
+  function applyBuiltin(settings, builtin) {
+    var next = mergeSettings(settings);
+    var file = builtin || {};
+    if (!next.serverUrl && file.serverUrl) {
+      var url = String(file.serverUrl).trim().replace(/\/+$/, '');
+      if (/^https?:\/\//i.test(url)) next.serverUrl = url;
+    }
+    if (!next.apiKey && file.apiKey) {
+      var key = inspectApiKey(file.apiKey);
+      if (key.ok && !key.empty) next.apiKey = key.value;
+    }
+    return next;
+  }
+
   function mergeSettings(saved) {
     var defaults = defaultSettings();
     var incoming = saved && typeof saved === 'object' ? saved : {};
@@ -138,7 +167,7 @@
     var junk = filters.junk || {};
     return {
       serverUrl: String(incoming.serverUrl || '').trim().replace(/\/+$/, ''),
-      apiKey: String(incoming.apiKey || '').trim(),
+      apiKey: inspectApiKey(incoming.apiKey).value,
       sources: {
         allPhotos: sources.allPhotos !== false,
         favorites: sources.favorites !== false,
@@ -158,6 +187,7 @@
       nightStart: util.formatClock(incoming.nightStart, defaults.nightStart),
       nightEnd: util.formatClock(incoming.nightEnd, defaults.nightEnd),
       burnInAvoidance: incoming.burnInAvoidance !== false,
+      keepAwake: incoming.keepAwake !== false,
       filters: {
         peopleOnly: filters.peopleOnly === true,
         minRating: util.clamp(filters.minRating, 0, 5, 0),
@@ -259,6 +289,37 @@
   Alcove.DEFAULT_JUNK_QUERIES = DEFAULT_JUNK_QUERIES.slice();
   Alcove.defaultSettings = defaultSettings;
   Alcove.mergeSettings = mergeSettings;
+  Alcove.inspectApiKey = inspectApiKey;
+  Alcove.applyBuiltin = applyBuiltin;
   Alcove.redactSettings = redactSettings;
+  function readPackagedConfig(done) {
+    if (typeof XMLHttpRequest === 'undefined') {
+      done(Alcove.builtinConfig || null);
+      return;
+    }
+    var xhr = new XMLHttpRequest();
+    try {
+      xhr.open('GET', 'config.local.json', true);
+    } catch (err) {
+      done(Alcove.builtinConfig || null);
+      return;
+    }
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+        try {
+          done(JSON.parse(xhr.responseText));
+          return;
+        } catch (err) {
+          done(Alcove.builtinConfig || null);
+          return;
+        }
+      }
+      done(Alcove.builtinConfig || null);
+    };
+    xhr.onerror = function () { done(Alcove.builtinConfig || null); };
+    xhr.send();
+  }
+
   Alcove.createSettingsStore = createSettingsStore;
+  Alcove.readPackagedConfig = readPackagedConfig;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -35,6 +35,7 @@
       visibility: raw.visibility || 'timeline',
       width: exif.exifImageWidth || 0,
       height: exif.exifImageHeight || 0,
+      orientation: exif.orientation == null ? '' : String(exif.orientation),
       rating: rating,
       city: exif.city || '',
       state: exif.state || '',
