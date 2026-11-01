@@ -92,6 +92,7 @@ ares-install --device living-room --remove com.ethan.alcove
 Press **Yellow** for settings. A USB keyboard can press **S**.
 
 - Server URL: `http://192.168.1.66:2283`. A trailing `/api` is optional.
+- All photos is on by default. That is a random sample of the library, so the wall still fills when you have no favorites. If the wall is empty, it lists how many photos each source returned, how many each filter removed, and any HTTP error such as a missing API permission.
 - API key: type it with the on-screen keyboard.
 
 In Immich, open Account settings, API Keys, and create a key with only these permissions:
