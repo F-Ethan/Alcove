@@ -6,6 +6,8 @@
     var tiles = [];
     var paused = false;
     var started = false;
+    var heroSide = 'left';
+    var forcedHero = '';
 
     function settings() {
       return opts.getSettings();
@@ -48,7 +50,12 @@
       clearTimers();
       rootEl.innerHTML = '';
       tiles = [];
-      var slots = Alcove.layouts.slotsFor(settings().layout, orientations || []);
+      var shapes = orientations || [];
+      forcedHero = shapes.length && Alcove.layouts.countPortraits(shapes) === 0 ? 'landscape' : '';
+      var slots = Alcove.layouts.slotsFor(settings().layout, {
+        heroSide: heroSide,
+        heroOrient: forcedHero || 'portrait'
+      });
       for (var i = 0; i < slots.length; i++) {
         var slot = slots[i];
         var el = document.createElement('div');
@@ -91,6 +98,9 @@
           front: 0,
           cap: cap,
           slot: slot,
+          role: slot.role || '',
+          box: slot,
+          aspect: 0,
           history: [],
           asset: null,
           seq: 0,
@@ -101,6 +111,53 @@
         });
       }
       applyMotion();
+      relayout();
+    }
+
+    function placeTile(tile, frame) {
+      if (!tile || !frame) return;
+      tile.slot = frame;
+      tile.role = frame.role || tile.role;
+      tile.el.style.left = frame.left + '%';
+      tile.el.style.top = frame.top + '%';
+      tile.el.style.width = frame.width + '%';
+      tile.el.style.height = frame.height + '%';
+    }
+
+    function relayout() {
+      if (!tiles.length) return;
+      if (settings().layout === 'mixed') {
+        var heroTile = tiles[0];
+        var mateTile = tiles[1];
+        var heroAspect = heroTile && heroTile.aspect ? heroTile.aspect : 0;
+        var heroOrient = forcedHero || 'portrait';
+        if (!forcedHero && heroAspect > 1.05) heroOrient = 'landscape';
+        if (!forcedHero && heroAspect && heroAspect < 0.95) heroOrient = 'portrait';
+        var smallAspects = [];
+        for (var s = 2; s < 5; s++) smallAspects.push(tiles[s] && tiles[s].aspect ? tiles[s].aspect : 0);
+        var frames = Alcove.layouts.collage({
+          heroSide: heroSide,
+          heroOrient: heroOrient,
+          heroAspect: heroAspect,
+          mateAspect: mateTile && mateTile.aspect ? mateTile.aspect : 0,
+          smallAspects: smallAspects
+        });
+        for (var i = 0; i < tiles.length && i < frames.length; i++) placeTile(tiles[i], frames[i]);
+        return;
+      }
+      for (var n = 0; n < tiles.length; n++) {
+        placeTile(tiles[n], Alcove.layouts.fitInBox(tiles[n].box || tiles[n].slot, tiles[n].aspect));
+      }
+    }
+
+    function rememberAspect(tile, asset) {
+      var aspect = Alcove.layouts.aspectOf(asset);
+      if (aspect) tile.aspect = aspect;
+      if (tile.role === 'hero' && tile.seenId && asset && asset.id !== tile.seenId) {
+        heroSide = heroSide === 'left' ? 'right' : 'left';
+      }
+      if (asset && asset.id) tile.seenId = asset.id;
+      relayout();
     }
 
     function captionText(asset) {
@@ -138,6 +195,13 @@
       function once() {
         if (done) return;
         done = true;
+        if (incoming.naturalWidth && incoming.naturalHeight) {
+          var natural = incoming.naturalWidth / incoming.naturalHeight;
+          if (!tile.aspect || Math.abs(natural - tile.aspect) / natural > 0.03) {
+            tile.aspect = natural;
+            relayout();
+          }
+        }
         finish();
       }
       incoming.onload = once;
@@ -167,6 +231,7 @@
           if (tile.history.length > 12) tile.history.shift();
         }
         tile.asset = asset;
+        rememberAspect(tile, asset);
         reveal(tile, asset, url, pinned);
       }).catch(function () {
         if (opts.onImageError) opts.onImageError(asset);

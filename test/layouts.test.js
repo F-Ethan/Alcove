@@ -31,9 +31,13 @@ test('prints sit in from the edge, and the five-photo collage covers about 55 pe
   });
   const mixed = Alcove.layouts.slotsFor('mixed');
   const mixedArea = Alcove.layouts.coverage(mixed);
-  assert.ok(mixedArea >= 52 && mixedArea <= 58, 'mixed coverage ' + mixedArea);
-  assert.ok(mixed.some(function (slot) { return slot.prefer === 'portrait'; }));
-  assert.ok(mixed.some(function (slot) { return slot.prefer === 'landscape'; }));
+  assert.ok(mixedArea >= 48 && mixedArea <= 60, 'mixed coverage ' + mixedArea);
+  assert.equal(mixed[0].prefer, 'portrait');
+  assert.equal(mixed[1].prefer, 'landscape');
+  const heroArea = mixed[0].width * mixed[0].height;
+  const mateArea = mixed[1].width * mixed[1].height;
+  assert.ok(heroArea > mateArea);
+  assert.ok(mateArea / heroArea >= 0.4 && mateArea / heroArea <= 0.65);
   const single = Alcove.layouts.slotsFor('single')[0];
   assert.ok(single.width <= 76);
   assert.equal(Alcove.layouts.orientationOf({ width: 800, height: 1400 }), 'portrait');

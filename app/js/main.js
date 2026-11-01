@@ -205,9 +205,10 @@
     reloadTimer = setTimeout(reloadLibrary, 350);
   }
 
-  function boot() {
+  function boot(packaged) {
     var store = Alcove.createSettingsStore(root.localStorage);
-    settings = store.load();
+    settings = Alcove.applyBuiltin(store.load(), packaged);
+    if ((settings.serverUrl || settings.apiKey) && packaged) store.save(settings);
     var decorQuery = root.location && String(root.location.search || '').match(/[?&]decor=([a-z]+)/);
     if (decorQuery && Alcove.DECORATIONS.indexOf(decorQuery[1]) !== -1) {
       settings.decoration = decorQuery[1];
@@ -216,7 +217,7 @@
       if (!settings.serverUrl || !settings.apiKey) {
         settings = store.save({
           serverUrl: settings.serverUrl || root.location.origin,
-          apiKey: settings.apiKey || 'dev-key',
+          apiKey: settings.apiKey || 'devkeydevkeydevkeydevkeydevkeydevkeydevkeydevkx',
           sources: settings.sources,
           layout: settings.layout,
           intervalSec: settings.intervalSec,
@@ -288,6 +289,7 @@
         syncDecor();
         syncChrome();
         syncMusic();
+        if (keeper) keeper.sync(!!settings.keepAwake);
       },
       onTestMusic: function (current) {
         var source = current.music.source;
@@ -441,6 +443,11 @@
       audioA: document.getElementById('audio-a'),
       audioB: document.getElementById('audio-b')
     });
+    var keeper = Alcove.createKeepAwake({
+      mock: !!(root.location && String(root.location.search || '').indexOf('mock=1') !== -1),
+      video: document.getElementById('keep-awake')
+    });
+    keeper.sync(!!settings.keepAwake);
     syncDecor();
     syncChrome();
     syncMusic();
@@ -473,6 +480,10 @@
     };
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  function start() {
+    var launch = function () { Alcove.readPackagedConfig(boot); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', launch);
+    else launch();
+  }
+  start();
 })(window);

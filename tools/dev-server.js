@@ -145,8 +145,11 @@ function smart(body) {
 }
 
 function svgFor(asset) {
-  const width = asset && asset.exifInfo && asset.exifInfo.exifImageWidth > asset.exifInfo.exifImageHeight ? 1600 : 1000;
-  const height = width === 1600 ? 1000 : 1500;
+  const rawW = asset && asset.exifInfo && asset.exifInfo.exifImageWidth ? asset.exifInfo.exifImageWidth : 1600;
+  const rawH = asset && asset.exifInfo && asset.exifInfo.exifImageHeight ? asset.exifInfo.exifImageHeight : 1000;
+  const scale = 900 / Math.max(rawW, rawH);
+  const width = Math.max(1, Math.round(rawW * scale));
+  const height = Math.max(1, Math.round(rawH * scale));
   const label = asset ? (asset.exifInfo.city || asset.originalFileName) : 'Missing';
   const hue = asset ? asset.id.length * 40 : 0;
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '"><rect width="100%" height="100%" fill="hsl(' + hue + ', 28%, 32%)"/><text x="50%" y="52%" fill="#f3efe6" font-size="64" text-anchor="middle" font-family="sans-serif">' + label + '</text></svg>';
@@ -197,6 +200,15 @@ const server = http.createServer(function (request, response) {
   }
   if (url.pathname === '/api/server/ping') {
     send(response, 200, JSON.stringify({ res: 'pong' }));
+    return;
+  }
+  if (url.pathname === '/api/users/me') {
+    const key = String(request.headers['x-api-key'] || '');
+    if (!/^[A-Za-z0-9_-]{30,}$/.test(key)) {
+      send(response, 401, JSON.stringify({ message: 'Invalid API key' }));
+      return;
+    }
+    send(response, 200, JSON.stringify({ id: 'ethan', name: 'Ethan' }));
     return;
   }
   if (url.pathname === '/api/albums') {

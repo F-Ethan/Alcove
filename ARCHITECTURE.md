@@ -26,13 +26,13 @@ The on-screen keyboard appears when a text field is focused. That is the LG keyb
 
 ## Talking to Immich
 
-`app/js/immich.js` is the only place that knows Immich URLs. The TV stores a base such as `http://192.168.1.66:2283`. Requests go to `{base}/api/...` with the header `x-api-key`.
+`app/js/immich.js` is the only place that knows Immich URLs. The TV stores a base such as `http://192.168.x.x:2283`. Requests go to `{base}/api/...` with the header `x-api-key`.
 
 Calls Alcove actually makes:
 
 | Need | Request |
 | --- | --- |
-| Reachability | `GET /api/server/ping` |
+| Connection test | `GET /api/users/me` (needs `user.read`) |
 | All photos | `POST /api/search/random` (a sample; metadata search is the fallback) |
 | Favorites, albums, people | `POST /api/search/metadata` |
 | One folder | `GET /api/view/folder?path=` |
@@ -46,7 +46,11 @@ Search still uses the flat fields (`type`, `isFavorite`, `albumIds`, `personIds`
 
 `normalizeAsset` copies only fields the server really returns: type, visibility, favorite, archived, trashed, file name, path, EXIF width, height, rating, city, state, description, people, and tags. Star rating lives on `exifInfo.rating`. There is no separate blur score.
 
-`app/js/probe.js` classifies a failed ping. A 401 is a bad key. If the normal request throws and a `no-cors` request still reaches the host, the TV is blocking the response (CORS). If both fail, the laptop is unreachable.
+`app/js/probe.js` classifies the `users/me` response. A 401 means the key was refused. A 403 means a permission is missing. A key that is too short, or that contains a space or a character outside letters, digits, `_`, and `-`, is rejected before any request. If the normal request throws and a `no-cors` request still reaches the host, the TV is blocking the response (CORS). If both fail, the server is unreachable.
+
+`app/js/settings.js` can fill a blank server URL and a blank API key from `app/config.local.json` when that file was packaged. A value already saved on the TV wins. The example key in `app/config.local.example.json` is too short to apply.
+
+`app/js/awake.js` asks webOS not to start its screensaver (`registerScreenSaverRequest`, then `ack: false`). That path is a no-op in the browser and when `?mock=1` is set. On a TV, a tiny muted video is the fallback only if the Luna call fails. The setting is `keepAwake`, on by default.
 
 ## What gets shown
 
@@ -67,9 +71,9 @@ People-only skips a photo when Immich sent an empty people list. If the people f
 
 `app/js/playlist.js` shuffles that pool. The next photo is one that is outside the recent window when the pool is large enough, and it prefers a portrait or landscape if the slot asked for one.
 
-`app/js/layouts.js` turns the layout name into rectangles with a margin of wall around them. Mixed collage is five prints covering about 55% of the screen. The season background is a CSS class on the frame (`.theme-christmas` and the others). Christmas also draws a ribbon and bow on each mat, outside the picture.
+`app/js/layouts.js` turns the layout name into rectangles with a margin of wall around them. Each frame is sized to the photo's real aspect (EXIF width and height, swapped when orientation is 5, 6, 7, or 8). Mixed collage is five prints covering about half the screen: one large portrait, one landscape at about half that area, and three smaller prints. The clock zone in the bottom right stays empty. If the pool has no portraits, the hero is a landscape. The season background is a CSS class on the frame (`.theme-christmas` and the others). Christmas also draws a ribbon and bow on each mat, outside the picture.
 
-`app/js/wall.js` owns the tiles. Each tile has two images and its own timer, offset so they do not all fade at once. The new image fades in. Ken Burns is a CSS animation on the visible image.
+`app/js/wall.js` owns the tiles. Each tile has two images and its own timer, offset so they do not all fade at once. The new image fades in with `object-fit: contain`. Ken Burns is a CSS animation on the visible image. After the image loads, a natural size that disagrees with EXIF by more than about 3% replaces the slot. The hero side flips when the hero photo changes.
 
 ## Pictures and memory
 

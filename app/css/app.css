@@ -90,7 +90,7 @@ textarea {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   opacity: 0;
   transition-property: opacity;
   transition-duration: var(--fade);
@@ -366,6 +366,16 @@ textarea {
   50% { opacity: 1; }
 }
 
+#keep-awake {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .chrome {
   position: absolute;
   inset: 0;
@@ -512,6 +522,16 @@ textarea {
   border: 0;
   padding: 0.2rem 0;
   background: transparent;
+}
+
+.reveal-toggle {
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.45rem;
+  border: 1px solid #6d5a36;
+  background: #2a241c;
+  color: #f3efe6;
+  cursor: pointer;
 }
 
 .row-help,
