@@ -232,6 +232,14 @@ const server = http.createServer(function (request, response) {
     readBody(request).then(function (body) { send(response, 200, JSON.stringify(search(body))); });
     return;
   }
+  if (url.pathname === '/api/search/random' && request.method === 'POST') {
+    readBody(request).then(function (body) {
+      const found = search(body).assets.items;
+      const size = body && body.size ? body.size : found.length;
+      send(response, 200, JSON.stringify(found.slice(0, size)));
+    });
+    return;
+  }
   if (url.pathname === '/api/search/smart' && request.method === 'POST') {
     readBody(request).then(function (body) { send(response, 200, JSON.stringify(smart(body))); });
     return;

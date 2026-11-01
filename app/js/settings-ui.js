@@ -136,6 +136,13 @@
         label: 'Sources',
         rows: [
           {
+            id: 'allPhotos',
+            kind: 'bool',
+            label: 'All photos',
+            path: ['sources', 'allPhotos'],
+            help: 'A random sample of the whole library. On by default. If every other source comes back empty, Alcove tries this anyway.'
+          },
+          {
             id: 'favorites',
             kind: 'bool',
             label: 'Favorites',

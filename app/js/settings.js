@@ -31,6 +31,7 @@
       serverUrl: '',
       apiKey: '',
       sources: {
+        allPhotos: true,
         favorites: true,
         onThisDay: false,
         albums: [],
@@ -139,6 +140,7 @@
       serverUrl: String(incoming.serverUrl || '').trim().replace(/\/+$/, ''),
       apiKey: String(incoming.apiKey || '').trim(),
       sources: {
+        allPhotos: sources.allPhotos !== false,
         favorites: sources.favorites !== false,
         onThisDay: sources.onThisDay === true,
         albums: asIdList(sources.albums),

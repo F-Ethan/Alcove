@@ -42,3 +42,21 @@ test('filters drop archived, hidden, trashed, screenshots, small files, low rati
   ], settings, { good: true });
   assert.equal(kept.map(function (asset) { return asset.id; }).join(','), 'unknown');
 });
+
+test('a missing width or height does not fail the size floor', function () {
+  const settings = Alcove.mergeSettings({
+    filters: { minShortEdge: 720, peopleOnly: false, minRating: 0, junk: { enabled: false } }
+  });
+  const kept = Alcove.filters.apply([
+    photo({ id: 'nodim', width: 0, height: 0, people: [{ id: 'p' }] }),
+    photo({ id: 'nowidth', width: 0, height: 4000, people: [{ id: 'p' }] }),
+    photo({ id: 'small', width: 400, height: 300, people: [{ id: 'p' }] })
+  ], settings, null);
+  assert.equal(kept.map(function (item) { return item.id; }).join(','), 'nodim,nowidth');
+  const summary = Alcove.filters.summarize([
+    photo({ id: 'nodim', width: 0, height: 0 }),
+    photo({ id: 'small', width: 400, height: 300 })
+  ], settings, null);
+  assert.equal(summary.dropped.small, 1);
+  assert.equal(summary.keptCount, 1);
+});

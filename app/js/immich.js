@@ -107,6 +107,21 @@
       });
     }
 
+    function withoutVisibility(body) {
+      var next = {};
+      var key;
+      for (key in body) {
+        if (key === 'visibility') continue;
+        if (Object.prototype.hasOwnProperty.call(body, key)) next[key] = body[key];
+      }
+      return next;
+    }
+
+    function readRandom(data) {
+      if (Array.isArray(data)) return normalizeMany(data);
+      return assetsFromSearch(data);
+    }
+
     function searchPages(path, body, read) {
       var page = 1;
       var all = [];
@@ -132,7 +147,28 @@
     return {
       base: function () { return base; },
       searchMetadata: function (body) {
-        return searchPages('/search/metadata', body, assetsFromSearch);
+        return searchPages('/search/metadata', body, assetsFromSearch).catch(function (error) {
+          if (error && error.status === 400 && body && body.visibility) {
+            return searchPages('/search/metadata', withoutVisibility(body), assetsFromSearch);
+          }
+          throw error;
+        });
+      },
+      searchRandom: function (body) {
+        var client = this;
+        function fromMetadata() {
+          return client.searchMetadata(body);
+        }
+        return request('/search/random', body).then(readRandom).catch(function (error) {
+          if (error && error.status === 400 && body && body.visibility) {
+            return request('/search/random', withoutVisibility(body)).then(readRandom).catch(function (again) {
+              if (again && (again.status === 400 || again.status === 404)) return fromMetadata();
+              throw again;
+            });
+          }
+          if (error && error.status === 404) return fromMetadata();
+          throw error;
+        });
       },
       searchSmart: function (body) {
         return request('/search/smart', body).then(assetsFromSearch);

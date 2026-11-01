@@ -33,6 +33,7 @@ Calls Alcove actually makes:
 | Need | Request |
 | --- | --- |
 | Reachability | `GET /api/server/ping` |
+| All photos | `POST /api/search/random` (a sample; metadata search is the fallback) |
 | Favorites, albums, people | `POST /api/search/metadata` |
 | One folder | `GET /api/view/folder?path=` |
 | Folder list | `GET /api/view/folder/unique-paths` |

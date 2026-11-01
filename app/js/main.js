@@ -13,6 +13,7 @@
   var reloadTimer = 0;
   var note = null;
   var userPaused = false;
+  var lastReport = null;
   var player = null;
   var musicSignature = '';
 
@@ -100,20 +101,18 @@
 
   function publish(assets, failures, options) {
     rawAssets = assets || [];
-    pool = Alcove.filters.apply(rawAssets, settings, excludeMap());
+    var summary = Alcove.filters.summarize(rawAssets, settings, excludeMap());
+    pool = summary.kept;
     for (var n = 0; n < pool.length; n++) pool[n].caption = Alcove.captionFor(pool[n]);
     playlist = Alcove.createPlaylist(pool);
     usingLibrary = true;
+    if (options && options.report) lastReport = options.report;
     if (!options || options.persist !== false) Alcove.savePool(root.localStorage, rawAssets);
     if (!pool.length && note) {
       note.hidden = false;
-      if (!rawAssets.length) {
-        note.textContent = failures
-          ? 'Immich did not return photos. Open settings and test the connection.'
-          : 'No photos matched these sources. Pick an album, a person, favorites, or a folder.';
-      } else {
-        note.textContent = 'Every photo was filtered out. Relax the filters in settings.';
-      }
+      note.textContent = Alcove.explainEmpty(lastReport, summary);
+    } else if (note) {
+      note.hidden = true;
     }
     if (wall) wall.restart();
     if (loader && pool.length) loader.preload(pool);
@@ -146,7 +145,7 @@
       if (result.failed && screen && screen.isOpen()) {
         screen.setStatus('Some junk searches failed. Alcove excluded the matches that came back.');
       }
-      if (rawAssets.length) publish(rawAssets, 0);
+      if (rawAssets.length) publish(rawAssets, 0, { report: lastReport });
       return next;
     }).catch(function () {
       return cache;
@@ -175,13 +174,13 @@
           folders: withSelected(result.catalogs.folders, settings.sources.folders)
         });
       }
-      publish(result.assets, result.failures);
+      publish(result.assets, result.failures, { report: result.report });
       refreshJunk();
     }).catch(function () {
       setOffline(true);
       if (!rawAssets.length && note) {
         note.hidden = false;
-        note.textContent = 'Immich did not return photos. Open settings and test the connection.';
+        note.textContent = 'No photos on the wall.\nThe library request failed before Immich returned a count.';
       }
     });
   }
