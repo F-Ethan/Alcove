@@ -17,7 +17,10 @@ test('settings merge clamps values and keeps secrets out of the redacted copy', 
   assert.equal(saved.sources.favorites, false);
   assert.equal(saved.sources.albums.join(','), 'a');
   assert.equal(saved.layout, 'mixed');
-  assert.equal(saved.intervalSec, 5);
+  assert.equal(saved.intervalSec, 30);
+  assert.equal(saved.arrangementSec, 600);
+  assert.equal(Alcove.mergeSettings({ arrangementSec: 30 }).arrangementSec, 120);
+  assert.equal(Alcove.mergeSettings({}).intervalSec, 45);
   assert.equal(saved.filters.minRating, 5);
   assert.equal(saved.filters.junk.perQuery, 200);
   assert.equal(saved.filters.junk.queries.join('|'), 'blurry photo|black photo');

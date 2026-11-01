@@ -16,6 +16,8 @@ function loadAlcove(files) {
     console: console,
     setTimeout: setTimeout,
     clearTimeout: clearTimeout,
+    setInterval: setInterval,
+    clearInterval: clearInterval,
     Promise: Promise,
     Date: Date,
     Math: Math,

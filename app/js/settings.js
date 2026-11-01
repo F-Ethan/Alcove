@@ -39,8 +39,9 @@
         folders: []
       },
       layout: 'mixed',
-      intervalSec: 20,
-      crossfadeMs: 900,
+      intervalSec: 45,
+      arrangementSec: 600,
+      crossfadeMs: 750,
       kenBurns: true,
       decoration: 'auto',
       showClock: true,
@@ -177,8 +178,9 @@
         folders: asIdList(sources.folders)
       },
       layout: pickEnum(incoming.layout, LAYOUTS, defaults.layout),
-      intervalSec: util.clamp(incoming.intervalSec, 5, 180, defaults.intervalSec),
-      crossfadeMs: util.clamp(incoming.crossfadeMs, 0, 3000, defaults.crossfadeMs),
+      intervalSec: util.clamp(incoming.intervalSec, 30, 120, defaults.intervalSec),
+      arrangementSec: util.clamp(incoming.arrangementSec, 120, 1800, defaults.arrangementSec),
+      crossfadeMs: util.clamp(incoming.crossfadeMs, 600, 900, defaults.crossfadeMs),
       kenBurns: incoming.kenBurns !== false,
       decoration: pickEnum(incoming.decoration, DECORATIONS, defaults.decoration),
       showClock: incoming.showClock !== false,

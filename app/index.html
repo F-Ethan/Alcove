@@ -17,6 +17,7 @@
       <p id="clock" class="clock" hidden></p>
       <p id="offline" class="pill" hidden>Offline</p>
       <p id="paused" class="pill" hidden>Paused</p>
+      <p id="awake-status" class="awake-status" hidden></p>
       <p id="hint" class="hint">Yellow opens settings. OK pauses.</p>
     </div>
   </section>
@@ -32,14 +33,16 @@
     </div>
   </section>
 
-  <audio id="audio-a" preload="none"></audio>
-  <audio id="audio-b" preload="none"></audio>
-  <video id="keep-awake" muted loop playsinline preload="auto" src="keep-awake.mp4"></video>
+  <video id="audio-a" class="stage-media" playsinline webkit-playsinline preload="auto"></video>
+  <video id="audio-b" class="stage-media" playsinline webkit-playsinline preload="auto"></video>
+  <video id="keep-awake" class="stage-media" muted loop playsinline webkit-playsinline preload="auto" src="keep-awake.mp4"></video>
 
   <script src="js/util.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/probe.js"></script>
   <script src="js/layouts.js"></script>
+  <script src="js/schedule.js"></script>
+  <script src="js/preload.js"></script>
   <script src="js/playlist.js"></script>
   <script src="js/retry.js"></script>
   <script src="js/immich.js"></script>

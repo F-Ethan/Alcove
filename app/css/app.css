@@ -59,11 +59,22 @@ textarea {
   position: absolute;
   inset: 0;
   z-index: 1;
-  --fade: 900ms;
-  --dwell: 20s;
+  --slide: 750ms;
+  --dwell: 45s;
+  transition: opacity var(--slide) ease-in-out, transform var(--slide) ease-in-out;
 }
 
-.tile {
+.tiles.swap-out {
+  opacity: 0;
+  transform: translate3d(0, 2.5%, 0);
+}
+
+.slot {
+  position: absolute;
+  overflow: visible;
+}
+
+.print {
   position: absolute;
   box-sizing: border-box;
   padding: 0.72rem;
@@ -74,7 +85,34 @@ textarea {
     0 0 0 1px rgba(255, 248, 235, 0.28),
     0 0.35rem 0.7rem rgba(0, 0, 0, 0.28),
     0 1.15rem 2.2rem rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--slide) ease-in-out, opacity var(--slide) ease-in-out;
+  will-change: transform, opacity;
 }
+
+.print.idle {
+  visibility: hidden;
+  opacity: 0;
+  transition: none;
+  pointer-events: none;
+}
+
+.print.show {
+  visibility: visible;
+  z-index: 1;
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.print.from-left,
+.print.to-left { transform: translate3d(-105%, 0, 0); opacity: 0; }
+.print.from-right,
+.print.to-right { transform: translate3d(105%, 0, 0); opacity: 0; }
+.print.from-up,
+.print.to-up { transform: translate3d(0, -105%, 0); opacity: 0; }
+.print.from-down,
+.print.to-down { transform: translate3d(0, 105%, 0); opacity: 0; }
 
 .well {
   position: relative;
@@ -85,27 +123,19 @@ textarea {
   box-shadow: inset 0 0 0 1px rgba(40, 32, 24, 0.4);
 }
 
-.tile .layer {
+.print .layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0;
-  transition-property: opacity;
-  transition-duration: var(--fade);
-  transition-timing-function: ease;
 }
 
-.tile .layer.on {
-  opacity: 1;
-}
-
-.tiles.ken .layer.on {
+.tiles.ken .print.show .layer {
   animation: ken var(--dwell) ease-in-out alternate infinite;
 }
 
-.tile.kb-alt .layer.on {
+.print.kb-alt.show .layer {
   animation-name: ken-alt;
 }
 
@@ -166,7 +196,7 @@ textarea {
   width: 0.4rem;
 }
 
-.tile.bow-right .ribbon-v {
+.print.bow-right .ribbon-v {
   left: auto;
   right: 0.16rem;
 }
@@ -366,14 +396,25 @@ textarea {
   50% { opacity: 1; }
 }
 
-#keep-awake {
+.stage-media {
   position: absolute;
-  width: 2px;
-  height: 2px;
   left: 0;
   top: 0;
-  opacity: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 1;
+  z-index: 6;
   pointer-events: none;
+}
+
+.awake-status {
+  position: absolute;
+  left: 2rem;
+  bottom: 4.6rem;
+  margin: 0;
+  color: #d9d3c8;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
 }
 
 .chrome {

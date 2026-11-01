@@ -62,6 +62,7 @@
     return [
       current.layout,
       current.intervalSec,
+      current.arrangementSec,
       current.crossfadeMs,
       current.kenBurns ? 1 : 0,
       current.showCaptions ? 1 : 0
@@ -445,7 +446,13 @@
     });
     var keeper = Alcove.createKeepAwake({
       mock: !!(root.location && String(root.location.search || '').indexOf('mock=1') !== -1),
-      video: document.getElementById('keep-awake')
+      video: document.getElementById('keep-awake'),
+      onStatus: function (line) {
+        var el = document.getElementById('awake-status');
+        if (!el) return;
+        el.textContent = line || '';
+        el.hidden = !line;
+      }
     });
     keeper.sync(!!settings.keepAwake);
     syncDecor();

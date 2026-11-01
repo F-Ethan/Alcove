@@ -227,8 +227,50 @@
     return 'mixed';
   }
 
+  // Fixed arrangements. A slot keeps this box until the whole arrangement changes.
+  // fitInBox may shrink the mat inside the box. It does not move the neighbors.
+  var ARRANGEMENT_NAMES = ['left', 'right', 'center', 'stack'];
+  var ARRANGEMENTS = {
+    left: [
+      { x: 7.5, y: 7, w: 31.5, h: 84, prefer: 'portrait', role: 'hero' },
+      { x: 42, y: 7, w: 30.4, h: 36, prefer: 'landscape', role: 'mate' },
+      { x: 76, y: 7, w: 16.9, h: 20, prefer: 'landscape', role: 'small' },
+      { x: 76, y: 32, w: 15.8, h: 42, prefer: 'portrait', role: 'small' },
+      { x: 42, y: 48, w: 21.9, h: 26, prefer: 'landscape', role: 'small' }
+    ],
+    right: [
+      { x: 67.5, y: 7, w: 25.5, h: 68, prefer: 'portrait', role: 'hero' },
+      { x: 34, y: 7, w: 30, h: 36, prefer: 'landscape', role: 'mate' },
+      { x: 7, y: 7, w: 24, h: 24, prefer: 'landscape', role: 'small' },
+      { x: 7, y: 36, w: 18, h: 50, prefer: 'portrait', role: 'small' },
+      { x: 34, y: 48, w: 26, h: 24, prefer: 'landscape', role: 'small' }
+    ],
+    center: [
+      { x: 37, y: 7, w: 26, h: 64, prefer: 'portrait', role: 'hero' },
+      { x: 14, y: 75, w: 48, h: 18, prefer: 'landscape', role: 'mate' },
+      { x: 7, y: 14, w: 18, h: 46, prefer: 'portrait', role: 'small' },
+      { x: 70, y: 8, w: 22, h: 26, prefer: 'landscape', role: 'small' },
+      { x: 70, y: 40, w: 18, h: 32, prefer: 'portrait', role: 'small' }
+    ],
+    stack: [
+      { x: 7, y: 26, w: 30, h: 66, prefer: 'portrait', role: 'hero' },
+      { x: 42, y: 7, w: 34, h: 34, prefer: 'landscape', role: 'mate' },
+      { x: 7, y: 7, w: 30, h: 15, prefer: 'landscape', role: 'small' },
+      { x: 80, y: 8, w: 13, h: 36, prefer: 'portrait', role: 'small' },
+      { x: 42, y: 48, w: 30, h: 26, prefer: 'landscape', role: 'small' }
+    ]
+  };
+
+  function arrangement(name) {
+    var key = ARRANGEMENTS[name] ? name : 'left';
+    var source = ARRANGEMENTS[key];
+    var slots = [];
+    for (var i = 0; i < source.length; i++) slots.push(slotFrom(source[i]));
+    return slots;
+  }
+
   function slotsFor(layout, options) {
-    if (layout === 'mixed') return collage(options || {});
+    if (layout === 'mixed') return arrangement(options && options.arrangement);
     var template = TEMPLATES[layout] || TEMPLATES.single;
     var slots = [];
     for (var i = 0; i < template.length; i++) slots.push(slotFrom(template[i]));
@@ -270,6 +312,8 @@
     orientationOf: orientationOf,
     countPortraits: countPortraits,
     mixedTemplate: mixedTemplate,
+    ARRANGEMENT_NAMES: ARRANGEMENT_NAMES,
+    arrangement: arrangement,
     slotsFor: slotsFor,
     collage: collage,
     fitInBox: fitInBox,
