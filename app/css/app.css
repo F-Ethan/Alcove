@@ -3,7 +3,7 @@ body {
   margin: 0;
   width: 100%;
   height: 100%;
-  background: #0c0c0b;
+  background: #171410;
   color: #f3efe6;
   font-family: "LG Smart UI", "Segoe UI", sans-serif;
 }
@@ -24,21 +24,65 @@ textarea {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #0c0c0b;
+  background-color: #171410;
+  background-image: radial-gradient(ellipse at 50% 42%, #2a241c 0%, #171410 58%, #100e0c 100%);
+}
+
+/* Season papers live here. Add .theme-<name> when a new decoration needs its own ground. */
+.theme-winter {
+  background-color: #1a242c;
+  background-image: radial-gradient(ellipse at 50% 36%, #314552 0%, #141c22 72%);
+}
+
+.theme-fall {
+  background-color: #24160f;
+  background-image: radial-gradient(ellipse at 50% 40%, #3a2618 0%, #1a100c 70%);
+}
+
+.theme-spring {
+  background-color: #17221a;
+  background-image: radial-gradient(ellipse at 50% 38%, #24362a 0%, #121812 72%);
+}
+
+.theme-summer {
+  background-color: #241c12;
+  background-image: radial-gradient(ellipse at 50% 34%, #3d311c 0%, #16110c 70%);
+}
+
+.theme-christmas {
+  background-color: #1e3d34;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><rect width='180' height='180' fill='%231e3d34'/><path d='M0 90 L90 0 L180 90 L90 180 Z' fill='none' stroke='%23c4a15a' stroke-opacity='0.28' stroke-width='1.2'/><path d='M0 0 L180 180 M180 0 L0 180' stroke='%23f4efe6' stroke-opacity='0.05' stroke-width='1'/><circle cx='90' cy='90' r='3' fill='%23c4a15a' fill-opacity='0.5'/><circle cx='0' cy='90' r='2.2' fill='%23e7d7a2' fill-opacity='0.45'/><circle cx='180' cy='90' r='2.2' fill='%23e7d7a2' fill-opacity='0.45'/><circle cx='90' cy='0' r='2.2' fill='%23e7d7a2' fill-opacity='0.45'/><circle cx='90' cy='180' r='2.2' fill='%23e7d7a2' fill-opacity='0.45'/></svg>");
+  background-size: 200px 200px;
 }
 
 .tiles {
   position: absolute;
   inset: 0;
+  z-index: 1;
   --fade: 900ms;
   --dwell: 20s;
 }
 
 .tile {
   position: absolute;
+  box-sizing: border-box;
+  padding: 0.72rem;
+  overflow: visible;
+  background: #f3efe6;
+  border-radius: 0.2rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 248, 235, 0.28),
+    0 0.35rem 0.7rem rgba(0, 0, 0, 0.28),
+    0 1.15rem 2.2rem rgba(0, 0, 0, 0.38);
+}
+
+.well {
+  position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  background: #161614;
-  border-radius: 0.35rem;
+  background: #1a1814;
+  box-shadow: inset 0 0 0 1px rgba(40, 32, 24, 0.4);
 }
 
 .tile .layer {
@@ -88,6 +132,89 @@ textarea {
   font-size: 1.15rem;
   color: #f3efe6;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
+.ribbon,
+.bow {
+  display: none;
+  pointer-events: none;
+}
+
+.theme-christmas .ribbon,
+.theme-christmas .bow {
+  display: block;
+}
+
+.ribbon {
+  position: absolute;
+  z-index: 2;
+  background: linear-gradient(#9e2a32, #c4454d 42%, #7a1e26);
+  box-shadow: 0 0 0 1px rgba(212, 175, 90, 0.72);
+}
+
+.ribbon-h {
+  top: 0.16rem;
+  left: 0.12rem;
+  right: 0.12rem;
+  height: 0.4rem;
+}
+
+.ribbon-v {
+  top: 0.12rem;
+  bottom: 0.12rem;
+  left: 0.16rem;
+  width: 0.4rem;
+}
+
+.tile.bow-right .ribbon-v {
+  left: auto;
+  right: 0.16rem;
+}
+
+.bow {
+  position: absolute;
+  z-index: 3;
+  width: 2.6rem;
+  height: 1.8rem;
+}
+
+.bow-left .bow {
+  top: -0.2rem;
+  left: -0.15rem;
+}
+
+.bow-right .bow {
+  top: -0.2rem;
+  right: -0.15rem;
+}
+
+.bow::before,
+.bow::after {
+  content: "";
+  position: absolute;
+  top: 0.05rem;
+  width: 1.25rem;
+  height: 1rem;
+  background: #a32d36;
+  border-radius: 50% 50% 42% 42%;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(212, 175, 90, 0.65);
+}
+
+.bow-left .bow::before { left: 0; transform: rotate(-28deg); }
+.bow-left .bow::after { left: 1.05rem; transform: rotate(24deg); }
+.bow-right .bow::before { right: 1.05rem; transform: rotate(-24deg); }
+.bow-right .bow::after { right: 0; transform: rotate(28deg); }
+
+.knot {
+  position: absolute;
+  left: 50%;
+  top: 0.62rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: -0.25rem;
+  border-radius: 50%;
+  background: #d4af55;
+  box-shadow: 0 0 0 1px rgba(90, 24, 28, 0.45);
 }
 
 .frame-note {
@@ -151,9 +278,12 @@ textarea {
   pointer-events: none;
 }
 
-.decor-winter,
-.decor-christmas {
+.decor-winter {
   box-shadow: inset 0 0 140px rgba(176, 206, 224, 0.18);
+}
+
+.decor-christmas {
+  box-shadow: inset 0 0 90px rgba(12, 28, 22, 0.18);
 }
 
 .decor-fall {

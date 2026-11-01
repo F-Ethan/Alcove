@@ -67,7 +67,7 @@ People-only skips a photo when Immich sent an empty people list. If the people f
 
 `app/js/playlist.js` shuffles that pool. The next photo is one that is outside the recent window when the pool is large enough, and it prefers a portrait or landscape if the slot asked for one.
 
-`app/js/layouts.js` turns the layout name into rectangles. Mixed collage picks a template from how many portraits are in the pool.
+`app/js/layouts.js` turns the layout name into rectangles with a margin of wall around them. Mixed collage is five prints covering about 55% of the screen. The season background is a CSS class on the frame (`.theme-christmas` and the others). Christmas also draws a ribbon and bow on each mat, outside the picture.
 
 `app/js/wall.js` owns the tiles. Each tile has two images and its own timer, offset so they do not all fade at once. The new image fades in. Ken Burns is a CSS animation on the visible image.
 

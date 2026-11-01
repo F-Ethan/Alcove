@@ -208,6 +208,10 @@
   function boot() {
     var store = Alcove.createSettingsStore(root.localStorage);
     settings = store.load();
+    var decorQuery = root.location && String(root.location.search || '').match(/[?&]decor=([a-z]+)/);
+    if (decorQuery && Alcove.DECORATIONS.indexOf(decorQuery[1]) !== -1) {
+      settings.decoration = decorQuery[1];
+    }
     if (root.location && String(root.location.search || '').indexOf('mock=1') !== -1) {
       if (!settings.serverUrl || !settings.apiKey) {
         settings = store.save({
@@ -316,7 +320,8 @@
     });
 
     function syncDecor() {
-      Alcove.renderDecoration(document.getElementById('decor'), settings.decoration, new Date());
+      var kind = Alcove.renderDecoration(document.getElementById('decor'), settings.decoration, new Date());
+      Alcove.applyTheme(document.getElementById('frame'), kind);
     }
 
     function syncChrome() {

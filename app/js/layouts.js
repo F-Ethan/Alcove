@@ -1,51 +1,44 @@
 (function (root) {
   var Alcove = root.Alcove = root.Alcove || {};
-  var GAP = 0.55;
 
+  // Slots are percentages of the screen. Gaps and outer margins are part of
+  // the coordinates, so a print never sits on the bezel.
   var TEMPLATES = {
     single: [
-      { x: 0, y: 0, w: 100, h: 100, prefer: 'any' }
+      { x: 14, y: 10, w: 72, h: 76, prefer: 'any' }
     ],
     two: [
-      { x: 0, y: 0, w: 50, h: 100, prefer: 'any' },
-      { x: 50, y: 0, w: 50, h: 100, prefer: 'any' }
+      { x: 8, y: 14, w: 38, h: 70, prefer: 'any' },
+      { x: 54, y: 14, w: 38, h: 70, prefer: 'any' }
     ],
     three: [
-      { x: 0, y: 0, w: 62, h: 100, prefer: 'landscape' },
-      { x: 62, y: 0, w: 38, h: 50, prefer: 'landscape' },
-      { x: 62, y: 50, w: 38, h: 50, prefer: 'landscape' }
+      { x: 8, y: 12, w: 50, h: 74, prefer: 'landscape' },
+      { x: 64, y: 12, w: 28, h: 34, prefer: 'landscape' },
+      { x: 64, y: 52, w: 28, h: 34, prefer: 'landscape' }
     ],
     four: [
-      { x: 0, y: 0, w: 50, h: 50, prefer: 'any' },
-      { x: 50, y: 0, w: 50, h: 50, prefer: 'any' },
-      { x: 0, y: 50, w: 50, h: 50, prefer: 'any' },
-      { x: 50, y: 50, w: 50, h: 50, prefer: 'any' }
+      { x: 10, y: 11, w: 36, h: 34, prefer: 'any' },
+      { x: 54, y: 11, w: 36, h: 34, prefer: 'any' },
+      { x: 10, y: 53, w: 36, h: 34, prefer: 'any' },
+      { x: 54, y: 53, w: 36, h: 34, prefer: 'any' }
     ],
-    mixedPortrait: [
-      { x: 0, y: 0, w: 64, h: 62, prefer: 'landscape' },
-      { x: 0, y: 62, w: 64, h: 38, prefer: 'landscape' },
-      { x: 64, y: 0, w: 36, h: 100, prefer: 'portrait' }
-    ],
-    mixedPair: [
-      { x: 0, y: 6, w: 28, h: 88, prefer: 'portrait' },
-      { x: 28, y: 16, w: 44, h: 68, prefer: 'landscape' },
-      { x: 72, y: 6, w: 28, h: 88, prefer: 'portrait' }
-    ],
-    mixedLandscape: [
-      { x: 0, y: 0, w: 66, h: 66, prefer: 'landscape' },
-      { x: 66, y: 0, w: 34, h: 33, prefer: 'landscape' },
-      { x: 66, y: 33, w: 34, h: 33, prefer: 'landscape' },
-      { x: 0, y: 66, w: 100, h: 34, prefer: 'landscape' }
+    // Five prints, about 55% of the screen, with a wide margin of wall.
+    mixed: [
+      { x: 18, y: 7, w: 64, h: 28, prefer: 'landscape' },
+      { x: 7, y: 39, w: 22, h: 50, prefer: 'portrait' },
+      { x: 33, y: 39, w: 34, h: 28, prefer: 'landscape' },
+      { x: 71, y: 39, w: 22, h: 50, prefer: 'portrait' },
+      { x: 33, y: 71, w: 34, h: 18, prefer: 'landscape' }
     ]
   };
 
-  function inset(slot) {
+  function slotFrom(raw) {
     return {
-      left: slot.x + GAP,
-      top: slot.y + GAP,
-      width: Math.max(1, slot.w - GAP * 2),
-      height: Math.max(1, slot.h - GAP * 2),
-      prefer: slot.prefer || 'any'
+      left: raw.x,
+      top: raw.y,
+      width: raw.w,
+      height: raw.h,
+      prefer: raw.prefer || 'any'
     };
   }
 
@@ -67,19 +60,35 @@
     return count;
   }
 
-  function mixedTemplate(orientations) {
-    var portraits = countPortraits(orientations);
-    if (portraits >= 2) return 'mixedPair';
-    if (portraits === 1) return 'mixedPortrait';
-    return 'mixedLandscape';
+  function mixedTemplate() {
+    return 'mixed';
   }
 
-  function slotsFor(layout, orientations) {
-    var name = layout === 'mixed' ? mixedTemplate(orientations) : layout;
+  function slotsFor(layout) {
+    var name = layout === 'mixed' ? 'mixed' : layout;
     var template = TEMPLATES[name] || TEMPLATES.single;
     var slots = [];
-    for (var i = 0; i < template.length; i++) slots.push(inset(template[i]));
+    for (var i = 0; i < template.length; i++) slots.push(slotFrom(template[i]));
     return slots;
+  }
+
+  function coverage(slots) {
+    var area = 0;
+    var list = slots || [];
+    for (var i = 0; i < list.length; i++) area += list[i].width * list[i].height;
+    return area / 100;
+  }
+
+  function minMargin(slots) {
+    var edge = 100;
+    var list = slots || [];
+    for (var i = 0; i < list.length; i++) {
+      var slot = list[i];
+      var right = 100 - (slot.left + slot.width);
+      var bottom = 100 - (slot.top + slot.height);
+      edge = Math.min(edge, slot.left, slot.top, right, bottom);
+    }
+    return edge;
   }
 
   function initialDelay(index, count, intervalMs) {
@@ -92,8 +101,11 @@
   Alcove.layouts = {
     TEMPLATES: TEMPLATES,
     orientationOf: orientationOf,
+    countPortraits: countPortraits,
     mixedTemplate: mixedTemplate,
     slotsFor: slotsFor,
+    coverage: coverage,
+    minMargin: minMargin,
     initialDelay: initialDelay
   };
 })(typeof window !== 'undefined' ? window : globalThis);

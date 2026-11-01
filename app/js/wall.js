@@ -52,11 +52,13 @@
       for (var i = 0; i < slots.length; i++) {
         var slot = slots[i];
         var el = document.createElement('div');
-        el.className = 'tile' + (i % 2 ? ' kb-alt' : '');
+        el.className = 'tile' + (i % 2 ? ' kb-alt bow-right' : ' bow-left');
         el.style.left = slot.left + '%';
         el.style.top = slot.top + '%';
         el.style.width = slot.width + '%';
         el.style.height = slot.height + '%';
+        var well = document.createElement('div');
+        well.className = 'well';
         var front = document.createElement('img');
         var back = document.createElement('img');
         front.className = 'layer on';
@@ -66,9 +68,22 @@
         var cap = document.createElement('p');
         cap.className = 'tile-cap';
         cap.hidden = true;
-        el.appendChild(front);
-        el.appendChild(back);
-        el.appendChild(cap);
+        well.appendChild(front);
+        well.appendChild(back);
+        well.appendChild(cap);
+        var ribbonH = document.createElement('i');
+        ribbonH.className = 'ribbon ribbon-h';
+        var ribbonV = document.createElement('i');
+        ribbonV.className = 'ribbon ribbon-v';
+        var bow = document.createElement('i');
+        bow.className = 'bow';
+        var knot = document.createElement('i');
+        knot.className = 'knot';
+        bow.appendChild(knot);
+        el.appendChild(well);
+        el.appendChild(ribbonH);
+        el.appendChild(ribbonV);
+        el.appendChild(bow);
         rootEl.appendChild(el);
         tiles.push({
           el: el,
