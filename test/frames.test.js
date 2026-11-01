@@ -132,9 +132,53 @@ test('keep awake does nothing in mock mode and blocks the screensaver on a TV', 
   assert.equal(tv.sync(true), 'luna');
   assert.equal(calls[0].method, 'registerScreenSaverRequest');
   assert.equal(calls[0].parameters.subscribe, true);
+  assert.equal(calls[0].parameters.clientName, 'com.ethan.alcove');
   assert.equal(calls[1].method, 'responseScreenSaverRequest');
   assert.equal(calls[1].parameters.ack, false);
   assert.equal(calls[1].parameters.timestamp, '99');
+  assert.equal(calls[1].parameters.clientName, 'com.ethan.alcove');
   tv.sync(false);
   assert.equal(calls.indexOf('cancel') !== -1, true);
+});
+
+test('keep awake plays the corner video on a TV and restarts it if it stalls', async function () {
+  const plays = [];
+  let line = '';
+  const listeners = {};
+  const video = {
+    paused: true,
+    ended: false,
+    readyState: 0,
+    setAttribute: function () {},
+    addEventListener: function (name, fn) { listeners[name] = fn; },
+    play: function () {
+      plays.push('play');
+      this.paused = false;
+      this.readyState = 4;
+      return Promise.resolve();
+    },
+    pause: function () { this.paused = true; }
+  };
+  const keeper = Alcove.createKeepAwake({
+    forceTv: true,
+    video: video,
+    onStatus: function (text) { line = text; },
+    webOSService: function (uri, options) {
+      if (options.onFailure && options.method === 'registerScreenSaverRequest') {
+        options.onFailure({ returnValue: false, errorText: 'denied' });
+      }
+      return { cancel: function () {} };
+    }
+  });
+  assert.equal(keeper.sync(true), 'video');
+  await Promise.resolve();
+  assert.equal(plays.length, 1);
+  assert.equal(line, 'Keep awake: luna=fail, video=playing');
+  video.paused = true;
+  video.readyState = 1;
+  listeners.stalled();
+  assert.equal(plays.length, 2);
+  keeper.sync(false);
+  assert.equal(line, '');
+  assert.equal(video.paused, true);
 });

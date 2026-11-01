@@ -78,6 +78,10 @@
     }
 
     function arm(el, url) {
+      if (!el) return;
+      el.setAttribute('playsinline', '');
+      el.setAttribute('webkit-playsinline', '');
+      if ('playsInline' in el) el.playsInline = true;
       el.src = url;
       var pending = el.play();
       if (pending && pending.catch) pending.catch(function () {});

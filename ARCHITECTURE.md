@@ -50,7 +50,7 @@ Search still uses the flat fields (`type`, `isFavorite`, `albumIds`, `personIds`
 
 `app/js/settings.js` can fill a blank server URL and a blank API key from `app/config.local.json` when that file was packaged. A value already saved on the TV wins. The example key in `app/config.local.example.json` is too short to apply.
 
-`app/js/awake.js` asks webOS not to start its screensaver (`registerScreenSaverRequest`, then `ack: false`). That path is a no-op in the browser and when `?mock=1` is set. On a TV, a tiny muted video is the fallback only if the Luna call fails. The setting is `keepAwake`, on by default.
+`app/js/awake.js` asks webOS not to start its screensaver. It subscribes to `luna://com.webos.service.tvpower/power` `registerScreenSaverRequest` with `subscribe: true` and `clientName: com.ethan.alcove`, then answers every timestamped request with `responseScreenSaverRequest`, `ack: false`, and that same timestamp. A 1-pixel looping H.264 file (`app/keep-awake.mp4`) plays at the same time, and restarts if it stalls. Music uses the same kind of inline `<video>` element, which webOS treats as media playback. The browser and `?mock=1` skip all of this. The setting is `keepAwake`, on by default. webOS 25 does not enforce Luna access groups, and LG's published group list does not name this tvpower method, so `requiredACG` stays empty.
 
 ## What gets shown
 
@@ -71,9 +71,13 @@ People-only skips a photo when Immich sent an empty people list. If the people f
 
 `app/js/playlist.js` shuffles that pool. The next photo is one that is outside the recent window when the pool is large enough, and it prefers a portrait or landscape if the slot asked for one.
 
-`app/js/layouts.js` turns the layout name into rectangles with a margin of wall around them. Each frame is sized to the photo's real aspect (EXIF width and height, swapped when orientation is 5, 6, 7, or 8). Mixed collage is five prints covering about half the screen: one large portrait, one landscape at about half that area, and three smaller prints. The clock zone in the bottom right stays empty. If the pool has no portraits, the hero is a landscape. The season background is a CSS class on the frame (`.theme-christmas` and the others). Christmas also draws a ribbon and bow on each mat, outside the picture.
+`app/js/layouts.js` turns the layout name into rectangles with a margin of wall around them. Mixed collage uses one of four fixed arrangements (`left`, `right`, `center`, `stack`). A slot keeps its position, size, and orientation until the arrangement changes. `fitInBox` may shrink that one mat so the photo's aspect fits, anchored in the same slot. EXIF width and height are used, swapped when orientation is 5, 6, 7, or 8. The clock zone in the bottom right stays empty. The season background is a CSS class on the frame (`.theme-christmas` and the others). Christmas also draws a ribbon and bow on each mat, outside the picture.
 
-`app/js/wall.js` owns the tiles. Each tile has two images and its own timer, offset so they do not all fade at once. The new image fades in with `object-fit: contain`. Ken Burns is a CSS animation on the visible image. After the image loads, a natural size that disagrees with EXIF by more than about 3% replaces the slot. The hero side flips when the hero photo changes.
+`app/js/schedule.js` picks the slot that has been up the longest. The gap between swaps is the per-photo time divided by the number of slots, so five prints at 45 seconds change about every 9 seconds and each photo stays up for the full time. A single print just uses the display time. Arrangements advance about every 10 minutes.
+
+`app/js/preload.js` loads and decodes the next image off-screen (`new Image()`, then `img.decode()` when it exists). A failed load is dropped and the next asset is tried. The queue keeps only the upcoming ids and revokes the rest.
+
+`app/js/wall.js` owns the slots. The whole print, including the mat, shadow, and gift ribbon, slides with a CSS transform. The next photo is decoded before it is shown. Ken Burns is a CSS animation on the visible image. Changing arrangements fades the wall only after every new photo has decoded.
 
 ## Pictures and memory
 

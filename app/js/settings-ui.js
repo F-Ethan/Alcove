@@ -193,29 +193,40 @@
             path: ['layout'],
             options: Alcove.LAYOUTS,
             labels: LAYOUT_LABELS,
-            help: 'Mixed collage hangs five prints with space around them. Side slots prefer portraits.'
+            help: 'Mixed collage keeps each print in place, then eases into a new arrangement.'
           },
           {
             id: 'intervalSec',
             kind: 'number',
             label: 'Time on screen',
             path: ['intervalSec'],
-            min: 5,
-            max: 180,
-            step: 1,
+            min: 30,
+            max: 120,
+            step: 5,
             suffix: ' seconds',
-            help: 'Each tile keeps its own clock, so the wall does not flip all at once.'
+            help: 'How long each photo stays. With several prints, Alcove changes the one that has been up the longest.'
+          },
+          {
+            id: 'arrangementSec',
+            kind: 'number',
+            label: 'New arrangement',
+            path: ['arrangementSec'],
+            min: 120,
+            max: 1800,
+            step: 60,
+            format: 'minutes',
+            help: 'How often the mixed collage eases into a different arrangement. Other layouts stay where they are.'
           },
           {
             id: 'crossfadeMs',
             kind: 'number',
-            label: 'Crossfade',
+            label: 'Slide',
             path: ['crossfadeMs'],
-            min: 0,
-            max: 3000,
-            step: 100,
+            min: 600,
+            max: 900,
+            step: 50,
             format: 'fade',
-            help: 'Set to 0 for a hard cut.'
+            help: 'How long the old print takes to slide out and the new one to slide in.'
           },
           {
             id: 'kenBurns',
@@ -356,6 +367,10 @@
       if (row.format === 'stars') return value ? value + ' stars' : 'Off';
       if (row.format === 'edge') return value ? value + ' px' : 'Off';
       if (row.format === 'fade') return value ? (value / 1000).toFixed(1) + ' s' : 'Off';
+      if (row.format === 'minutes') {
+        var mins = Math.round(Number(value) / 60);
+        return mins === 1 ? '1 minute' : mins + ' minutes';
+      }
       return String(value) + (row.suffix || '');
     }
     if (row.kind === 'multi') {

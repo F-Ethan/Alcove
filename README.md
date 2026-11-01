@@ -4,13 +4,13 @@ Alcove is a photo frame for an LG TV. It hangs stills from your own Immich serve
 
 ## What it does
 
-- **Layouts.** Single, 2-up, 3-up mosaic, 4-grid, and a mixed collage. Each frame follows the photo. A landscape stays landscape, a portrait stays portrait, and nothing is cropped into the wrong shape. The collage hangs about five prints with air around them: one large portrait, a landscape at about half that size, and three smaller prints toward the corners. The clock sits in a clear spot at the bottom right.
+- **Layouts.** Single, 2-up, 3-up mosaic, 4-grid, and a mixed collage. Each frame follows the photo. A landscape stays landscape, a portrait stays portrait, and nothing is cropped into the wrong shape. The collage hangs about five prints with air around them: one large portrait, a landscape beside or below it, and three smaller prints. The prints stay put while they are up. About every 10 minutes the mixed collage eases into a different arrangement. The clock sits in a clear spot at the bottom right.
 - **Seasonal themes.** Auto follows the date. You can also pick Christmas, winter, fall, spring, summer, or none. Christmas uses wrapping paper behind the prints, with a ribbon and a bow on the mat, not across the photo. Auto treats December 1 through January 6 as Christmas.
 - **Smart filtering.** All photos, favorites, albums, people, folders, and On this day. Optional filters drop screenshots, tiny photos, low star ratings, a tag you name, and the top matches from Immich smart search (blurry, receipts, and similar).
 - **Optional music.** Off until you turn it on. Navidrome, Jellyfin, or an internet radio URL. A playlist or stream can follow the season.
 - **Keep awake.** On by default. Alcove asks webOS not to start the screensaver while the wall is up.
 
-Photos change on their own, with a slow crossfade and a gentle Ken Burns move. A clock, captions, night dimming, and a slow shift that helps with burn-in are included.
+One photo changes at a time. Each one stays up for about 45 seconds, then slides out as the next slides in. A gentle Ken Burns move plays while it is up. A clock, captions, night dimming, and a slow shift that helps with burn-in are included.
 
 ## What you need
 
@@ -181,7 +181,7 @@ Tracks shuffle, loop, and crossfade. Night dimming lowers the music with the pic
 
 **The wall is empty.** A note on the frame lists each source, how many photos it returned, any HTTP error, how many photos the filters kept, and why the rest were dropped. Favorites can be empty if you have not starred anything. All photos should still fill the wall. If the junk filter count looks too high, turn **Smart search junk filter** off under Filters.
 
-**The TV goes to the screensaver.** Keep TV awake should be on. On webOS 25, Alcove subscribes to the TV power service and answers the screensaver request with `ack: false`. That handshake can only be confirmed on the TV. In a desktop browser, and with `?mock=1`, Alcove does not try it. If the Luna call fails on a real set, a tiny muted video plays as a fallback so the panel stays awake.
+**The TV goes to the screensaver.** Keep TV awake should be on. On the TV, a line at the lower left reads `Keep awake: luna=ok, video=playing` when both layers are up, or `fail` and `stopped` when they are not. Luna subscribes with the app id as `clientName` and answers each screensaver request with `ack: false` and the same timestamp. A tiny looping video also plays as a 1-pixel dot, and music plays through a video element. That handshake can only be confirmed on the TV. In a desktop browser, and with `?mock=1`, Alcove does not try it.
 
 **The app disappeared.** Developer Mode expired or was turned off, and webOS removed the sideload. Extend or turn the session back on, then install again with the `ares-install` command above.
 
