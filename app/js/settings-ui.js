@@ -193,7 +193,7 @@
             path: ['layout'],
             options: Alcove.LAYOUTS,
             labels: LAYOUT_LABELS,
-            help: 'Mixed collage uses portrait and landscape slots.'
+            help: 'Mixed collage hangs five prints with space around them. Side slots prefer portraits.'
           },
           {
             id: 'intervalSec',

@@ -28,6 +28,10 @@
     parent.appendChild(bar);
   }
 
+  var THEME_NAMES = ['none', 'christmas', 'winter', 'fall', 'spring', 'summer'];
+
+  // Particles live on the overlay. The wall color lives in CSS on .theme-<name>
+  // so a later season can bring its own paper without a new layout.
   function renderDecoration(parent, mode, date) {
     if (!parent) return 'none';
     var kind = Alcove.util.activeDecoration(mode, date || new Date());
@@ -43,5 +47,14 @@
     return kind;
   }
 
+  function applyTheme(frame, kind) {
+    if (!frame) return;
+    var name = THEME_NAMES.indexOf(kind) === -1 ? 'none' : kind;
+    for (var i = 0; i < THEME_NAMES.length; i++) frame.classList.remove('theme-' + THEME_NAMES[i]);
+    frame.classList.add('theme-' + name);
+  }
+
+  Alcove.THEME_NAMES = THEME_NAMES;
   Alcove.renderDecoration = renderDecoration;
+  Alcove.applyTheme = applyTheme;
 })(typeof window !== 'undefined' ? window : globalThis);
