@@ -33,12 +33,14 @@
       sources: {
         allPhotos: true,
         favorites: true,
+        favoritesOnly: false,
         onThisDay: false,
         albums: [],
         people: [],
         folders: []
       },
       layout: 'mixed',
+      scenes: [],
       intervalSec: 45,
       arrangementSec: 600,
       crossfadeMs: 750,
@@ -101,6 +103,16 @@
 
   function copy(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function asSceneList(value) {
+    var ids = asIdList(value);
+    if (!Alcove.scenes || !Alcove.scenes.known) return ids;
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      if (Alcove.scenes.known(ids[i])) out.push(ids[i]);
+    }
+    return out;
   }
 
   function asIdList(value) {
@@ -172,12 +184,14 @@
       sources: {
         allPhotos: sources.allPhotos !== false,
         favorites: sources.favorites !== false,
+        favoritesOnly: sources.favoritesOnly === true || filters.favoritesOnly === true || filters.favorites === true,
         onThisDay: sources.onThisDay === true,
         albums: asIdList(sources.albums),
         people: asIdList(sources.people),
         folders: asIdList(sources.folders)
       },
       layout: pickEnum(incoming.layout, LAYOUTS, defaults.layout),
+      scenes: asSceneList(incoming.scenes),
       intervalSec: util.clamp(incoming.intervalSec, 30, 120, defaults.intervalSec),
       arrangementSec: util.clamp(incoming.arrangementSec, 120, 1800, defaults.arrangementSec),
       crossfadeMs: util.clamp(incoming.crossfadeMs, 600, 900, defaults.crossfadeMs),

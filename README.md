@@ -4,7 +4,7 @@ Alcove is a photo frame for an LG TV. It hangs stills from your own Immich serve
 
 ## What it does
 
-- **Layouts.** Single, 2-up, 3-up mosaic, 4-grid, and a mixed collage. Each frame follows the photo. A landscape stays landscape, a portrait stays portrait, and nothing is cropped into the wrong shape. The collage hangs about five prints with air around them: one large portrait, a landscape beside or below it, and three smaller prints. The prints stay put while they are up. About every 10 minutes the mixed collage eases into a different arrangement. The clock sits in a clear spot at the bottom right.
+- **Layouts.** Six scene templates from the designer: a linen collage, a fireplace mantel, a fall gallery, a Christmas garland, plank-wall polaroids, and a Christmas fireplace. Each photo fills its frame. The frames stay put, and only the photo inside slides. About every 10 minutes Alcove eases into the next scene. Leave the layout list empty and it follows the season. Christmas scenes are December 1 through January 6, the fall gallery is fall, and if you pick only Christmas layouts they stay up all year.
 - **Seasonal themes.** Auto follows the date. You can also pick Christmas, winter, fall, spring, summer, or none. Christmas uses wrapping paper behind the prints, with a ribbon and a bow on the mat, not across the photo. Auto treats December 1 through January 6 as Christmas.
 - **Smart filtering.** All photos, favorites, albums, people, folders, and On this day. Optional filters drop screenshots, tiny photos, low star ratings, a tag you name, and the top matches from Immich smart search (blurry, receipts, and similar).
 - **Optional music.** Off until you turn it on. Navidrome, Jellyfin, or an internet radio URL. A playlist or stream can follow the season.
@@ -157,7 +157,11 @@ On the **Immich** page:
 2. Set **API key**. The field is plain text so a long key is easier to check. Press Right to move to **Show** or **Hide**, then OK to toggle it. Music passwords stay hidden until you do the same.
 3. Run **Test connection**. A good key says **Connected.** and Alcove starts loading the library.
 
-On the **Sources** page, **All photos** and **Favorites** start on. All photos is a random sample of the library (250 photos), so the wall can fill even when you have no favorites. **On this day** starts off. Albums, people, and folders start empty. Open one of those rows after a successful test, then pick items with OK. If a list says nothing is loaded yet, run Test connection and open it again.
+On the **Sources** page, **All photos** starts on. That is a random sample of the library, capped so the TV does not hold the whole catalog. **Favorites only** is one switch. Turn it on and the wall shows only Immich favorites. **On this day** starts off. Albums, people, and folders start empty. Open one of those rows after a successful test, then pick items with OK. If a list says nothing is loaded yet, run Test connection and open it again.
+
+On **Layout**, leave **Layouts** with nothing selected to follow the season. OK toggles a scene. **New arrangement** is how often the wall changes scene, about every 10 minutes.
+
+A line on the wall reads `Cache: 6 photos, 2 MB`. That is the small set of previews Alcove is holding. Previews are thumbnail or preview size, never the original file.
 
 The other pages are Layout, Decorations, Filters, Display, and Music. **Keep TV awake** is on the Display page and starts on.
 

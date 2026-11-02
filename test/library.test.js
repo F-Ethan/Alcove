@@ -85,7 +85,7 @@ test('an empty favorites list still fills the wall from a random sample', async 
   const settings = Alcove.mergeSettings({
     serverUrl: 'http://immich.local',
     apiKey: 'key',
-    sources: { favorites: true, allPhotos: true }
+    sources: { favoritesOnly: false, allPhotos: true }
   });
   const result = await Alcove.loadLibrary(settings, baseRoutes(function (path, body) {
     if (path === '/api/search/random') {
@@ -99,7 +99,38 @@ test('an empty favorites list still fills the wall from a random sample', async 
   assert.equal(result.assets.map(function (item) { return item.id; }).join(','), 'coast,porch');
   const names = result.report.sources.map(function (row) { return row.name + ':' + row.count; }).join('|');
   assert.equal(names.indexOf('All photos:2') !== -1, true);
-  assert.equal(names.indexOf('Favorites:0') !== -1, true);
+  assert.equal(names.indexOf('Favorites') === -1, true);
+});
+
+test('favorites only uses one switch and skips photos that are not favorites', async function () {
+  const settings = Alcove.mergeSettings({
+    serverUrl: 'http://immich.local',
+    apiKey: 'key',
+    sources: { allPhotos: true, favoritesOnly: true },
+    filters: { favorites: true }
+  });
+  assert.equal(settings.sources.favoritesOnly, true);
+  let sawFavoriteSearch = false;
+  let sawRandom = false;
+  const result = await Alcove.loadLibrary(settings, baseRoutes(function (path, body) {
+    if (path === '/api/search/random') sawRandom = true;
+    if (path === '/api/search/metadata' && body && body.isFavorite === true) {
+      sawFavoriteSearch = true;
+      return jsonResponse(200, {
+        assets: {
+          items: [
+            { id: 'star', type: 'IMAGE', isFavorite: true, visibility: 'timeline' },
+            { id: 'plain', type: 'IMAGE', isFavorite: false, visibility: 'timeline' }
+          ]
+        }
+      });
+    }
+    return jsonResponse(404, {});
+  }), new Date());
+  assert.equal(sawFavoriteSearch, true);
+  assert.equal(sawRandom, false);
+  const kept = Alcove.filters.apply(result.assets, settings, null);
+  assert.equal(kept.map(function (item) { return item.id; }).join(','), 'star');
 });
 
 test('when every selected source is empty, all photos is used as a fallback', async function () {

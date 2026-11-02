@@ -48,6 +48,8 @@
     if (asset.visibility === 'locked') return 'locked';
     if (isScreenshot(asset)) return 'screenshot';
     var filters = settings && settings.filters ? settings.filters : {};
+    var sources = settings && settings.sources ? settings.sources : {};
+    if (sources.favoritesOnly && asset.isFavorite !== true) return 'favorite';
     if (filters.peopleOnly && Array.isArray(asset.people) && asset.people.length === 0) return 'noPeople';
     // A missing width or height is unknown, so the size floor does not apply.
     var edge = shortEdge(asset);
@@ -70,6 +72,7 @@
       small: 0,
       rating: 0,
       tag: 0,
+      favorite: 0,
       junk: 0
     };
   }
