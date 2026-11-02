@@ -2,8 +2,16 @@
   var Alcove = root.Alcove = root.Alcove || {};
   var POOL_KEY = 'alcove.pool.v1';
 
-  function createMemoryBlobStore(max) {
-    var limit = max || 36;
+  function byteSize(blob) {
+    if (!blob) return 0;
+    if (typeof blob.size === 'number' && isFinite(blob.size)) return blob.size;
+    if (typeof blob.byteLength === 'number') return blob.byteLength;
+    return 0;
+  }
+
+  function createMemoryBlobStore(max, maxBytes) {
+    var limit = max || 8;
+    var byteCap = maxBytes > 0 ? maxBytes : 24 * 1024 * 1024;
     var items = [];
 
     function find(id) {
@@ -13,17 +21,30 @@
       return null;
     }
 
+    function totalBytes() {
+      var sum = 0;
+      for (var i = 0; i < items.length; i++) sum += items[i].bytes || 0;
+      return sum;
+    }
+
+    function evict() {
+      items.sort(function (a, b) { return a.at - b.at; });
+      while (items.length > limit) items.shift();
+      while (items.length && totalBytes() > byteCap) items.shift();
+    }
+
     return {
       put: function (id, blob) {
         var existing = find(id);
+        var bytes = byteSize(blob);
         if (existing) {
           existing.blob = blob;
+          existing.bytes = bytes;
           existing.at = Date.now();
         } else {
-          items.push({ id: id, blob: blob, at: Date.now() });
+          items.push({ id: id, blob: blob, bytes: bytes, at: Date.now() });
         }
-        items.sort(function (a, b) { return a.at - b.at; });
-        while (items.length > limit) items.shift();
+        evict();
         return Promise.resolve();
       },
       get: function (id) {
@@ -33,7 +54,8 @@
         return Promise.resolve(existing.blob);
       },
       has: function (id) { return !!find(id); },
-      size: function () { return items.length; }
+      size: function () { return items.length; },
+      bytes: function () { return totalBytes(); }
     };
   }
 
@@ -69,7 +91,7 @@
     try {
       var slim = [];
       var list = assets || [];
-      for (var i = 0; i < list.length && i < 80; i++) slim.push(slimAsset(list[i]));
+      for (var i = 0; i < list.length && i < 40; i++) slim.push(slimAsset(list[i]));
       storage.setItem(POOL_KEY, JSON.stringify(slim));
     } catch (err) {
       // A full local store should not stop the frame.
@@ -87,9 +109,10 @@
     }
   }
 
-  function createIdbBlobStore(max) {
+  function createIdbBlobStore(max, maxBytes) {
     if (!root.indexedDB) return null;
-    var limit = max || 36;
+    var limit = max || 8;
+    var byteCap = maxBytes > 0 ? maxBytes : 24 * 1024 * 1024;
     var dbPromise = null;
 
     function open() {
@@ -125,12 +148,18 @@
 
     function trim() {
       return run('readonly', function (store) { return store.getAll(); }).then(function (rows) {
-        var list = rows || [];
-        if (list.length <= limit) return;
+        var list = (rows || []).slice();
         list.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
-        var extra = list.length - limit;
+        var keepFrom = 0;
+        while (list.length - keepFrom > limit) keepFrom += 1;
+        var running = 0;
+        for (var b = keepFrom; b < list.length; b++) running += list[b].bytes || 0;
+        while (keepFrom < list.length && running > byteCap) {
+          running -= list[keepFrom].bytes || 0;
+          keepFrom += 1;
+        }
         var jobs = [];
-        for (var i = 0; i < extra; i++) {
+        for (var i = 0; i < keepFrom; i++) {
           jobs.push((function (id) {
             return run('readwrite', function (store) { return store.delete(id); });
           })(list[i].id));
@@ -142,7 +171,7 @@
     return {
       put: function (id, blob) {
         return run('readwrite', function (store) {
-          return store.put({ id: id, blob: blob, at: Date.now() });
+          return store.put({ id: id, blob: blob, bytes: byteSize(blob), at: Date.now() });
         }).then(function () { return trim(); }).catch(function () {});
       },
       get: function (id) {
@@ -154,9 +183,10 @@
   }
 
   function createOfflineStore(options) {
-    var max = options && options.max ? options.max : 36;
-    var memory = createMemoryBlobStore(max);
-    var idb = options && options.persistent === false ? null : createIdbBlobStore(max);
+    var max = options && options.max ? options.max : 8;
+    var maxBytes = options && options.maxBytes ? options.maxBytes : 24 * 1024 * 1024;
+    var memory = createMemoryBlobStore(max, maxBytes);
+    var idb = options && options.persistent === false ? null : createIdbBlobStore(max, maxBytes);
     return {
       put: function (id, blob) {
         memory.put(id, blob);
@@ -169,7 +199,8 @@
         return Promise.resolve(null);
       },
       has: function (id) { return memory.has(id); },
-      size: function () { return memory.size(); }
+      size: function () { return memory.size(); },
+      bytes: function () { return memory.bytes(); }
     };
   }
 

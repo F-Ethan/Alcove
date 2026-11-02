@@ -2,7 +2,7 @@
   var Alcove = root.Alcove = root.Alcove || {};
 
   function createUrlPool(options) {
-    var max = options.max || 24;
+    var max = options.max || 8;
     var createUrl = options.createUrl;
     var revokeUrl = options.revokeUrl;
     var items = [];
@@ -69,7 +69,7 @@
 
   function createImageLoader(options) {
     var pool = createUrlPool({
-      max: options.max || 24,
+      max: options.max || 8,
       createUrl: options.createUrl || function (blob) { return root.URL.createObjectURL(blob); },
       revokeUrl: options.revokeUrl || function (url) { root.URL.revokeObjectURL(url); }
     });
@@ -78,7 +78,9 @@
 
     function endpoint(asset) {
       var base = Alcove.util.apiBase(options.serverUrl());
-      return base + '/assets/' + encodeURIComponent(asset.id) + '/thumbnail?size=preview';
+      var edge = Number(asset && asset.slotEdge);
+      var size = edge > 0 && edge <= 520 ? 'thumbnail' : 'preview';
+      return base + '/assets/' + encodeURIComponent(asset.id) + '/thumbnail?size=' + size;
     }
 
     function fetchBlob(asset) {
@@ -144,7 +146,7 @@
     }
 
     function preload(assets) {
-      var list = (assets || []).slice(0, options.preload || 8);
+      var list = (assets || []).slice(0, options.preload || 3);
       var chain = Promise.resolve();
       for (var i = 0; i < list.length; i++) {
         chain = chain.then(preloadOne(list[i]));
@@ -170,7 +172,11 @@
         if (asset && asset.id) pool.release(asset.id);
       },
       releaseAll: pool.releaseAll,
-      pool: pool
+      pool: pool,
+      stats: function () {
+        var bytes = store && store.bytes ? store.bytes() : 0;
+        return { count: pool.size(), bytes: bytes };
+      }
     };
   }
 

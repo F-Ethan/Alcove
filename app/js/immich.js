@@ -1,6 +1,38 @@
 (function (root) {
   var Alcove = root.Alcove = root.Alcove || {};
 
+  function faceBox(face) {
+    if (!face) return null;
+    var x1 = Number(face.boundingBoxX1);
+    var y1 = Number(face.boundingBoxY1);
+    var x2 = Number(face.boundingBoxX2);
+    var y2 = Number(face.boundingBoxY2);
+    if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || x2 <= x1 || y2 <= y1) return null;
+    if (x2 > 1.5 || y2 > 1.5) {
+      var iw = Number(face.imageWidth) || 0;
+      var ih = Number(face.imageHeight) || 0;
+      if (iw <= 1 || ih <= 1) return null;
+      x1 /= iw;
+      x2 /= iw;
+      y1 /= ih;
+      y2 /= ih;
+    }
+    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+  }
+
+  function collectFaces(raw) {
+    var faces = [];
+    var people = raw && raw.people ? raw.people : [];
+    for (var i = 0; i < people.length; i++) {
+      var list = people[i] && people[i].faces ? people[i].faces : [];
+      for (var f = 0; f < list.length; f++) {
+        var box = faceBox(list[f]);
+        if (box) faces.push(box);
+      }
+    }
+    return faces;
+  }
+
   function normalizeAsset(raw) {
     if (!raw || !raw.id) return null;
     var exif = raw.exifInfo || {};
@@ -42,6 +74,7 @@
       description: exif.description || '',
       fileCreatedAt: raw.fileCreatedAt || raw.localDateTime || '',
       people: people,
+      faces: collectFaces(raw),
       tags: tags
     };
   }
@@ -240,6 +273,7 @@
   }
 
   Alcove.normalizeAsset = normalizeAsset;
+  Alcove.faceBox = faceBox;
   Alcove.captionFor = captionFor;
   Alcove.assetsFromSearch = assetsFromSearch;
   Alcove.createImmich = createImmich;

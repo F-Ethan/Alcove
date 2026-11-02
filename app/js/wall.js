@@ -13,7 +13,7 @@
     var layoutTimer = 0;
     var generation = 0;
     var queue = Alcove.preload.createPreloadQueue({
-      limit: 8,
+      limit: 3,
       load: loadAsset,
       revoke: function (asset, result) {
         if (result && result.pinned) releaseHeld(asset);
@@ -88,33 +88,11 @@
       layoutTimer = 0;
     }
 
-    function makePrint(index) {
-      var el = document.createElement('div');
-      el.className = 'print idle' + (index % 2 ? ' kb-alt bow-right' : ' bow-left');
-      var well = document.createElement('div');
-      well.className = 'well';
+    function makePhoto() {
       var img = document.createElement('img');
-      img.className = 'layer';
+      img.className = 'photo idle';
       img.alt = '';
-      var cap = document.createElement('p');
-      cap.className = 'tile-cap';
-      cap.hidden = true;
-      well.appendChild(img);
-      well.appendChild(cap);
-      var ribbonH = document.createElement('i');
-      ribbonH.className = 'ribbon ribbon-h';
-      var ribbonV = document.createElement('i');
-      ribbonV.className = 'ribbon ribbon-v';
-      var bow = document.createElement('i');
-      bow.className = 'bow';
-      var knot = document.createElement('i');
-      knot.className = 'knot';
-      bow.appendChild(knot);
-      el.appendChild(well);
-      el.appendChild(ribbonH);
-      el.appendChild(ribbonV);
-      el.appendChild(bow);
-      return { el: el, img: img, cap: cap };
+      return { el: img, img: img };
     }
 
     function placeSlot(el, frame) {
@@ -144,9 +122,27 @@
       }
     }
 
+    function sceneNames() {
+      if (!Alcove.scenes) return [arrangement];
+      var decor = 'none';
+      if (Alcove.util && Alcove.util.activeDecoration) {
+        decor = Alcove.util.activeDecoration(settings().decoration, new Date());
+      }
+      var names = Alcove.scenes.activeIds(settings().scenes, decor);
+      return names.length ? names : Alcove.scenes.seasonalIds(decor);
+    }
+
     function framesFor(name) {
+      if (Alcove.scenes && Alcove.scenes.get(name)) return Alcove.scenes.get(name).slots;
       if (settings().layout === 'mixed') return Alcove.layouts.arrangement(name || arrangement);
       return Alcove.layouts.slotsFor(settings().layout);
+    }
+
+    function placeWindow(win, frame) {
+      win.style.top = (frame.padTop || 0) + '%';
+      win.style.right = (frame.padRight || 0) + '%';
+      win.style.bottom = (frame.padBottom || 0) + '%';
+      win.style.left = (frame.padLeft || 0) + '%';
     }
 
     function build(name) {
@@ -154,17 +150,42 @@
       for (var s = 0; s < slots.length; s++) dropSlot(slots[s]);
       rootEl.innerHTML = '';
       slots = [];
+      var scene = Alcove.scenes ? Alcove.scenes.get(name) : null;
       var frames = framesFor(name);
       for (var i = 0; i < frames.length; i++) {
         var frame = frames[i];
         var el = document.createElement('div');
-        el.className = 'slot';
+        el.className = 'slot frame-' + (frame.frameStyle || 'plain');
         placeSlot(el, frame);
-        var front = makePrint(i);
-        var back = makePrint(i);
-        el.appendChild(front.el);
-        el.appendChild(back.el);
+        if (frame.rotation) {
+          el.style.transform = 'rotate(' + frame.rotation + 'deg)';
+          el.style.transformOrigin = (frame.originX || 50) + '% ' + (frame.originY || 50) + '%';
+        }
+        var win = document.createElement('div');
+        win.className = 'window';
+        placeWindow(win, frame);
+        var front = makePhoto();
+        var back = makePhoto();
+        var cap = document.createElement('p');
+        cap.className = 'tile-cap';
+        cap.hidden = true;
+        win.appendChild(front.el);
+        win.appendChild(back.el);
+        win.appendChild(cap);
+        el.appendChild(win);
+        if (frame.frameStyle === 'polaroid') {
+          var pin = document.createElement('i');
+          pin.className = 'pin';
+          el.appendChild(pin);
+        }
+        if (frame.frameStyle === 'tape') {
+          var tape = document.createElement('i');
+          tape.className = 'tape';
+          el.appendChild(tape);
+        }
         rootEl.appendChild(el);
+        front.cap = cap;
+        back.cap = cap;
         slots.push({
           index: i,
           el: el,
@@ -177,12 +198,13 @@
           held: [null, null],
           shownAt: 0,
           history: [],
-          aspect: 0,
+          aspect: frame.aspect || 0,
           busy: false,
           pending: null
         });
       }
       applyMotion();
+      if (scene && opts.onScene) opts.onScene(scene);
     }
 
     function captionText(asset) {
@@ -215,7 +237,8 @@
       incoming.cap.textContent = text;
       incoming.cap.hidden = !text;
       incoming.el.style.transition = 'none';
-      layoutPrint(incoming, slot.anchor, slot.aspect);
+      var focus = Alcove.scenes ? Alcove.scenes.focusPosition(asset) : { x: 50, y: 50 };
+      incoming.img.style.objectPosition = focus.x + '% ' + focus.y + '%';
       incoming.img.src = ready.url;
       var dir = Alcove.schedule.slideDirection(slot.anchor);
       var token = generation;
@@ -237,7 +260,9 @@
       }
       clearMotion(incoming);
       incoming.el.classList.add('from-' + OPPOSITE[dir]);
+      incoming.el.classList.add('sliding');
       incoming.el.classList.remove('idle');
+      outgoing.el.classList.add('sliding');
       var ms = slideMs();
       return new Promise(function (resolve) {
         var settled = false;
@@ -246,9 +271,11 @@
           settled = true;
           if (token === generation) {
             outgoing.img.removeAttribute('src');
+            outgoing.img.src = '';
             clearMotion(outgoing);
-            outgoing.el.classList.remove('show');
+            outgoing.el.classList.remove('show', 'sliding');
             outgoing.el.classList.add('idle');
+            incoming.el.classList.remove('sliding');
             var gone = slot.held[slot.front];
             if (gone && gone.pinned) releaseHeld(gone.asset);
             slot.held[slot.front] = null;
@@ -275,16 +302,22 @@
       });
     }
 
-    function pullAsset(prefer, tries) {
+    function tagEdge(asset, slot) {
+      if (asset && slot && slot.anchor && slot.anchor.slotEdge) asset.slotEdge = slot.anchor.slotEdge;
+      return asset;
+    }
+
+    function pullAsset(prefer, tries, slot) {
       if (tries > 8) return Promise.resolve(null);
       var asset = opts.requestNext ? opts.requestNext(prefer) : null;
       if (!asset) return Promise.resolve(null);
+      tagEdge(asset, slot);
       return queue.request(asset).then(function (ready) {
         return { asset: asset, ready: queue.claim(asset.id) || ready };
       }).catch(function () {
         queue.forget(asset.id);
         if (opts.onImageError) opts.onImageError(asset);
-        return pullAsset(prefer, tries + 1);
+        return pullAsset(prefer, tries + 1, slot);
       });
     }
 
@@ -304,13 +337,23 @@
           return takeNext(slot, tries + 1);
         });
       }
-      return pullAsset(slot.prefer, tries);
+      return pullAsset(slot.prefer, tries, slot);
+    }
+
+    function pendingCount() {
+      var count = 0;
+      for (var i = 0; i < slots.length; i++) {
+        if (slots[i].pending) count += 1;
+      }
+      return count;
     }
 
     function ensurePending(slot) {
       if (!slot || slot.pending || !opts.requestNext) return;
+      if (pendingCount() >= 3) return;
       var asset = opts.requestNext(slot.prefer);
       if (!asset) return;
+      tagEdge(asset, slot);
       slot.pending = asset;
       queue.request(asset).catch(function () {
         queue.forget(asset.id);
@@ -382,7 +425,7 @@
 
     function armLayout() {
       clearLayout();
-      if (paused || !started || settings().layout !== 'mixed') return;
+      if (paused || !started) return;
       var wait = (Number(settings().arrangementSec) > 0 ? Number(settings().arrangementSec) : 600) * 1000;
       var token = generation;
       layoutTimer = root.setTimeout(function () {
@@ -392,7 +435,7 @@
     }
 
     function rotateArrangement() {
-      if (settings().layout !== 'mixed') {
+      if (!sceneNames().length) {
         armLayout();
         return Promise.resolve();
       }
@@ -403,9 +446,9 @@
         }
       }
       clearSwap();
-      var names = Alcove.layouts.ARRANGEMENT_NAMES;
+      var names = sceneNames();
       var nextName = Alcove.schedule.nextArrangement(arrangement, names);
-      var frames = Alcove.layouts.arrangement(nextName);
+      var frames = framesFor(nextName);
       var picks = [];
       var index = 0;
       function pullOne() {
@@ -482,7 +525,10 @@
       rootEl.classList.remove('swap-out');
       started = true;
       paused = false;
-      arrangement = 'left';
+      var names = sceneNames();
+      arrangement = names[0] || '01_collage_full';
+      var sceneQuery = root.location && String(root.location.search || '').match(/[?&]scene=([a-z0-9_]+)/);
+      if (sceneQuery && Alcove.scenes && Alcove.scenes.get(sceneQuery[1])) arrangement = sceneQuery[1];
       bootSlots();
     }
 

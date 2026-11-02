@@ -15,6 +15,9 @@ test('settings merge clamps values and keeps secrets out of the redacted copy', 
   });
   assert.equal(saved.serverUrl, 'http://192.168.1.66:2283');
   assert.equal(saved.sources.favorites, false);
+  assert.equal(Alcove.mergeSettings({ filters: { favorites: true } }).sources.favoritesOnly, true);
+  assert.equal(Alcove.mergeSettings({ sources: { favoritesOnly: true, allPhotos: true } }).sources.favoritesOnly, true);
+  assert.equal(Alcove.mergeSettings({ sources: { favorites: true, allPhotos: true } }).sources.favoritesOnly, false);
   assert.equal(saved.sources.albums.join(','), 'a');
   assert.equal(saved.layout, 'mixed');
   assert.equal(saved.intervalSec, 30);

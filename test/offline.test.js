@@ -12,6 +12,11 @@ test('offline store keeps a small set of preview blobs', async function () {
   assert.equal(store.size(), 2);
   assert.equal(await store.get('a'), null);
   assert.equal(await store.get('c'), 'C');
+  const heavy = Alcove.createMemoryBlobStore(8, 100);
+  await heavy.put('big', { size: 80 });
+  await heavy.put('bigger', { size: 80 });
+  assert.equal(heavy.size(), 1);
+  assert.equal(heavy.bytes() <= 100, true);
 });
 
 test('a cached preview is used only when the network blob is missing', function () {
@@ -26,7 +31,7 @@ test('saved pool metadata round-trips without growing past the cap', function ()
   for (let i = 0; i < 90; i += 1) assets.push({ id: 'a' + i, type: 'IMAGE', city: 'Austin' });
   Alcove.savePool(storage, assets);
   const loaded = Alcove.loadPool(storage);
-  assert.equal(loaded.length, 80);
+  assert.equal(loaded.length, 40);
   assert.equal(loaded[0].city, 'Austin');
 });
 

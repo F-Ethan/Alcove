@@ -34,7 +34,8 @@
     return date.getFullYear() + '-' + Alcove.util.pad2(date.getMonth() + 1) + '-' + Alcove.util.pad2(date.getDate());
   }
 
-  var ALL_PHOTOS_SIZE = 250;
+  var ALL_PHOTOS_SIZE = 60;
+  var POOL_CAP = 80;
   var SOURCE_PERMISSION = {
     'All photos': 'asset.read',
     'Favorites': 'asset.read',
@@ -49,7 +50,7 @@
       visibility: 'timeline',
       withExif: true,
       withPeople: true,
-      size: 1000
+      size: 80
     };
     var key;
     for (key in extra) {
@@ -113,7 +114,9 @@
       if (rows[i].error) failures += 1;
       else assets = assets.concat(rows[i].assets);
     }
-    return { assets: dedupe(assets), failures: failures, sources: rows };
+    var unique = dedupe(assets);
+    if (unique.length > POOL_CAP) unique = unique.slice(0, POOL_CAP);
+    return { assets: unique, failures: failures, sources: rows };
   }
 
   function loadLibrary(settings, fetchImpl, now) {
@@ -124,8 +127,11 @@
     });
     var jobs = [];
     var sources = settings.sources || {};
-    if (sources.allPhotos) jobs.push(track('All photos', allPhotosJob(client)));
-    if (sources.favorites) jobs.push(track('Favorites', client.searchMetadata(searchBody({ isFavorite: true }))));
+    if (sources.favoritesOnly) {
+      jobs.push(track('Favorites', client.searchMetadata(searchBody({ isFavorite: true, size: ALL_PHOTOS_SIZE }))));
+    } else if (sources.allPhotos) {
+      jobs.push(track('All photos', allPhotosJob(client)));
+    }
     if (sources.albums && sources.albums.length) {
       jobs.push(track('Albums', client.searchMetadata(searchBody({ albumIds: sources.albums }))));
     }
@@ -178,6 +184,7 @@
       for (var i = 0; i < rows.length; i++) {
         if (!rows[i].error && rows[i].count > 0) yielded = true;
       }
+      if (sources.favoritesOnly) return withCatalogs(packed);
       if (yielded || sources.allPhotos) return withCatalogs(packed);
       return track('All photos', allPhotosJob(client), { fallback: true }).then(function (fallback) {
         rows.push(fallback);
@@ -197,6 +204,7 @@
     small: 'below the size floor',
     rating: 'below the star floor',
     tag: 'excluded tag',
+    favorite: 'not a favorite',
     junk: 'smart-search junk list'
   };
 

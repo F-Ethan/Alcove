@@ -1,0 +1,202 @@
+{
+  "name": "05_plank_polaroids",
+  "title": "Plank wall polaroids",
+  "description": "Honey-brown plank wall with twine, string lights and autumn/pine sprigs; three clothespin polaroids hang on the twine with equal gaps (small portrait, main 3:4, secondary 4:3) and two taped prints sit below the outer ones (square, 3:2 landscape).",
+  "canvas": [
+    1920,
+    1080
+  ],
+  "safe_area": {
+    "x": 96,
+    "y": 54,
+    "w": 1728,
+    "h": 972,
+    "nx": 0.05,
+    "ny": 0.05,
+    "nw": 0.9,
+    "nh": 0.9
+  },
+  "notes": "x,y,w,h = photo opening (unrotated) in 1920x1080 px; n* fields are fractions 0-1 of width/height. rotation_deg clockwise about rotation_pivot. outer_* = frame/mat/card incl. margins.",
+  "slots": [
+    {
+      "role": "small_portrait",
+      "label": "PORTRAIT 2:3",
+      "aspect_nominal": "2:3",
+      "x": 367,
+      "y": 222,
+      "w": 200,
+      "h": 300,
+      "aspect_ratio": 0.6667,
+      "rotation_deg": -2.5,
+      "rotation_pivot": [
+        467,
+        201
+      ],
+      "frame_style": "polaroid",
+      "frame_margins_top_right_bottom_left": [
+        22,
+        22,
+        84,
+        22
+      ],
+      "nx": 0.19115,
+      "ny": 0.20556,
+      "nw": 0.10417,
+      "nh": 0.27778,
+      "height_pct_of_screen": 27.8,
+      "outer_x": 345,
+      "outer_y": 200,
+      "outer_w": 244,
+      "outer_h": 406,
+      "outer_nx": 0.17969,
+      "outer_ny": 0.18519,
+      "outer_nw": 0.12708,
+      "outer_nh": 0.37593,
+      "inside_safe_area": true
+    },
+    {
+      "role": "main",
+      "label": "MAIN 3:4",
+      "aspect_nominal": "3:4",
+      "x": 655,
+      "y": 238,
+      "w": 330,
+      "h": 440,
+      "aspect_ratio": 0.75,
+      "rotation_deg": 1.2,
+      "rotation_pivot": [
+        820,
+        216
+      ],
+      "frame_style": "polaroid",
+      "frame_margins_top_right_bottom_left": [
+        22,
+        22,
+        84,
+        22
+      ],
+      "nx": 0.34115,
+      "ny": 0.22037,
+      "nw": 0.17188,
+      "nh": 0.40741,
+      "height_pct_of_screen": 40.7,
+      "outer_x": 633,
+      "outer_y": 216,
+      "outer_w": 374,
+      "outer_h": 546,
+      "outer_nx": 0.32969,
+      "outer_ny": 0.2,
+      "outer_nw": 0.19479,
+      "outer_nh": 0.50556,
+      "inside_safe_area": true
+    },
+    {
+      "role": "secondary",
+      "label": "SECONDARY 4:3",
+      "aspect_nominal": "4:3",
+      "x": 1073,
+      "y": 233,
+      "w": 480,
+      "h": 360,
+      "aspect_ratio": 1.3333,
+      "rotation_deg": -1.5,
+      "rotation_pivot": [
+        1313,
+        212
+      ],
+      "frame_style": "polaroid",
+      "frame_margins_top_right_bottom_left": [
+        22,
+        22,
+        84,
+        22
+      ],
+      "nx": 0.55885,
+      "ny": 0.21574,
+      "nw": 0.25,
+      "nh": 0.33333,
+      "height_pct_of_screen": 33.3,
+      "outer_x": 1051,
+      "outer_y": 211,
+      "outer_w": 524,
+      "outer_h": 466,
+      "outer_nx": 0.5474,
+      "outer_ny": 0.19537,
+      "outer_nw": 0.27292,
+      "outer_nh": 0.43148,
+      "inside_safe_area": true
+    },
+    {
+      "role": "small_square",
+      "label": "SQUARE 1:1",
+      "aspect_nominal": "1:1",
+      "x": 377,
+      "y": 712,
+      "w": 210,
+      "h": 210,
+      "aspect_ratio": 1.0,
+      "rotation_deg": -3,
+      "rotation_pivot": [
+        482,
+        841
+      ],
+      "frame_style": "tape",
+      "frame_margins_top_right_bottom_left": [
+        22,
+        22,
+        70,
+        22
+      ],
+      "nx": 0.19635,
+      "ny": 0.65926,
+      "nw": 0.10938,
+      "nh": 0.19444,
+      "height_pct_of_screen": 19.4,
+      "outer_x": 355,
+      "outer_y": 690,
+      "outer_w": 254,
+      "outer_h": 302,
+      "outer_nx": 0.1849,
+      "outer_ny": 0.63889,
+      "outer_nw": 0.13229,
+      "outer_nh": 0.27963,
+      "inside_safe_area": true
+    },
+    {
+      "role": "small_landscape",
+      "label": "LANDSCAPE 3:2",
+      "aspect_nominal": "3:2",
+      "x": 1163,
+      "y": 722,
+      "w": 300,
+      "h": 200,
+      "aspect_ratio": 1.5,
+      "rotation_deg": 2.5,
+      "rotation_pivot": [
+        1313,
+        853
+      ],
+      "frame_style": "tape",
+      "frame_margins_top_right_bottom_left": [
+        22,
+        22,
+        84,
+        22
+      ],
+      "nx": 0.60573,
+      "ny": 0.66852,
+      "nw": 0.15625,
+      "nh": 0.18519,
+      "height_pct_of_screen": 18.5,
+      "outer_x": 1141,
+      "outer_y": 700,
+      "outer_w": 344,
+      "outer_h": 306,
+      "outer_nx": 0.59427,
+      "outer_ny": 0.64815,
+      "outer_nw": 0.17917,
+      "outer_nh": 0.28333,
+      "inside_safe_area": true
+    }
+  ]
+}

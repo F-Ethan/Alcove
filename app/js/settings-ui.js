@@ -143,11 +143,11 @@
             help: 'A random sample of the whole library. On by default. If every other source comes back empty, Alcove tries this anyway.'
           },
           {
-            id: 'favorites',
+            id: 'favoritesOnly',
             kind: 'bool',
-            label: 'Favorites',
-            path: ['sources', 'favorites'],
-            help: 'Photos you have marked as favorites.'
+            label: 'Favorites only',
+            path: ['sources', 'favoritesOnly'],
+            help: 'Show only photos you have marked as favorites in Immich. One switch is enough.'
           },
           {
             id: 'onThisDay',
@@ -187,13 +187,12 @@
         label: 'Layout',
         rows: [
           {
-            id: 'layout',
-            kind: 'enum',
-            label: 'Layout',
-            path: ['layout'],
-            options: Alcove.LAYOUTS,
-            labels: LAYOUT_LABELS,
-            help: 'Mixed collage keeps each print in place, then eases into a new arrangement.'
+            id: 'scenes',
+            kind: 'multi',
+            label: 'Layouts',
+            path: ['scenes'],
+            catalog: 'scenes',
+            help: 'Leave every layout off to follow the season. If you pick only Christmas layouts, those stay up all year.'
           },
           {
             id: 'intervalSec',
@@ -398,7 +397,12 @@
   function createSettingsScreen(opts) {
     var store = opts.store;
     var settings = store.load();
-    var catalogs = { albums: [], people: [], folders: [] };
+    var catalogs = {
+      albums: [],
+      people: [],
+      folders: [],
+      scenes: Alcove.scenes ? Alcove.scenes.choices() : []
+    };
     var openFlag = false;
     var mode = 'sections';
     var sectionIndex = 0;

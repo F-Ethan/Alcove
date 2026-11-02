@@ -61,6 +61,7 @@
   function appearance(current) {
     return [
       current.layout,
+      JSON.stringify(current.scenes || []),
       current.intervalSec,
       current.arrangementSec,
       current.crossfadeMs,
@@ -95,6 +96,36 @@
     return Alcove.junk.asMap(cache.ids);
   }
 
+  function publishCache() {
+    var el = document.getElementById('cache-status');
+    if (!el) return;
+    var stats = loader && loader.stats ? loader.stats() : { count: 0, bytes: 0 };
+    var bytes = blobStore && blobStore.bytes ? blobStore.bytes() : (stats.bytes || 0);
+    var count = stats.count || 0;
+    var label = '0 MB';
+    if (bytes >= 1024 * 1024) label = (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    else if (bytes >= 1024) label = Math.round(bytes / 1024) + ' KB';
+    el.hidden = false;
+    el.textContent = 'Cache: ' + count + (count === 1 ? ' photo, ' : ' photos, ') + label;
+  }
+
+  function showScene(scene) {
+    var frameEl = document.getElementById('frame');
+    if (!frameEl || !scene) return;
+    frameEl.classList.add('scene-on');
+    frameEl.classList.toggle('scene-linen', !!scene.linen);
+    var corners = ['band', 'tl', 'tr', 'bl', 'br'];
+    for (var i = 0; i < corners.length; i++) frameEl.classList.remove('clock-' + corners[i]);
+    frameEl.classList.add('clock-' + (scene.clock || 'br'));
+    if (scene.background) {
+      frameEl.style.backgroundImage = 'url("' + scene.background + '")';
+      frameEl.style.backgroundSize = 'cover';
+      frameEl.style.backgroundPosition = 'center center';
+    } else {
+      frameEl.style.backgroundImage = '';
+    }
+  }
+
   function setOffline(on) {
     var badge = document.getElementById('offline');
     if (badge) badge.hidden = !on;
@@ -116,7 +147,7 @@
       note.hidden = true;
     }
     if (wall) wall.restart();
-    if (loader && pool.length) loader.preload(pool);
+    publishCache();
   }
 
   function refreshJunk() {
@@ -195,7 +226,8 @@
       apiKey: function () { return settings.apiKey; },
       fetch: root.fetch.bind(root),
       store: blobStore,
-      max: 24,
+      max: 8,
+      preload: 0,
       onOffline: function () { setOffline(true); },
       onOnline: function () { setOffline(false); }
     });
@@ -262,7 +294,9 @@
       },
       onShown: function () {
         if (usingLibrary && playlist && playlist.size() && note) note.hidden = true;
-      }
+        publishCache();
+      },
+      onScene: showScene
     });
 
     screen = Alcove.createSettingsScreen({
@@ -462,6 +496,7 @@
       syncDecor();
       syncChrome();
       syncMusic();
+      publishCache();
     }, 15000);
     var cachedPool = Alcove.loadPool(root.localStorage);
     if (settings.serverUrl && settings.apiKey && cachedPool.length) {
